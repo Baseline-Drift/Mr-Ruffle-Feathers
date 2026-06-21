@@ -87,6 +87,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 :root{
   --bg:#0d0a0f;
   --stone:#1a1520;
+  --surface:#1f1927;
   --panel:#231d2c;
   --border:#4a3560;
   --border-bright:#6a4d8a;
@@ -276,7 +277,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 #char-panel{display:none!important;
   grid-column:2;grid-row:1/5;
   background:var(--stone);border-left:2px solid var(--border);
-  padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+  padding:10px;overflow-y:auto;flex-direction:column;gap:6px;
 }
 .cp-section{font-family:'Cinzel',serif;font-size:.62rem;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:3px;text-align:center;margin-bottom:2px}
 .cp-bird-wrap{text-align:center}
@@ -333,6 +334,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
   clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);
   white-space:normal;width:100%;display:block;
   line-height:1.3;
+  flex-shrink:0;min-height:40px;margin-bottom:4px;box-sizing:border-box;
 }
 .act-btn:hover{background:rgba(201,168,76,.12);border-color:var(--gold);color:var(--gold)}
 .act-btn.danger{border-color:#6a2222;color:#c07070}
@@ -581,7 +583,6 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 }
 @media(min-width:641px){
   #action-grid .act-btn{max-width:480px;margin:0 auto}
-  #action-toolbar{max-width:640px;margin:0 auto;width:100%}
   #action-panel{display:flex;flex-direction:column;align-items:stretch}
 }
 </style>
