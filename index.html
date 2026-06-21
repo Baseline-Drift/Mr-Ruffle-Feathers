@@ -5,6 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>The Chosen Bird — A Mr. Ruffle Feathers Epic</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script>
+// Generate app icon at runtime and apply as favicon + apple-touch-icon
+(function(){
+  const c=document.createElement('canvas');
+  c.width=512;c.height=512;
+  const ctx=c.getContext('2d');
+  const w=512,h=512;
+
+  const bg=ctx.createRadialGradient(w*.5,h*.4,0,w*.5,h*.5,w*.7);
+  bg.addColorStop(0,'#1a0f2e');bg.addColorStop(1,'#0a0610');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+
+  const ringGrad=ctx.createRadialGradient(w*.5,h*.5,w*.08,w*.5,h*.5,w*.32);
+  ringGrad.addColorStop(0,'rgba(0,0,0,0)');
+  ringGrad.addColorStop(.7,'rgba(155,111,212,.25)');
+  ringGrad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ringGrad;
+  ctx.beginPath();ctx.arc(w*.5,h*.5,w*.32,0,Math.PI*2);ctx.fill();
+
+  ctx.strokeStyle='rgba(200,168,75,.7)';ctx.lineWidth=7;
+  ctx.beginPath();ctx.arc(w*.5,h*.5,w*.25,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(200,168,75,.3)';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(w*.5,h*.5,w*.31,0,Math.PI*2);ctx.stroke();
+
+  ctx.save();
+  ctx.translate(w*.5,h*.5);
+  ctx.fillStyle='#1a1420';
+  ctx.strokeStyle='#c8a84b';ctx.lineWidth=4.5;
+
+  ctx.beginPath();
+  ctx.ellipse(0,0,w*.18,h*.135,0,0,Math.PI*2);
+  ctx.fill();ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(-w*.11,-h*.11,w*.095,0,Math.PI*2);
+  ctx.fill();ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-w*.20,-h*.11);
+  ctx.lineTo(-w*.29,-h*.09);
+  ctx.lineTo(-w*.20,-h*.07);
+  ctx.closePath();
+  ctx.fillStyle='#c8a84b';ctx.fill();
+
+  ctx.fillStyle='#1a1420';
+  ctx.beginPath();
+  ctx.moveTo(w*.02,-h*.045);
+  ctx.quadraticCurveTo(w*.155,-h*.022,w*.145,h*.078);
+  ctx.quadraticCurveTo(w*.045,h*.09,-w*.022,h*.022);
+  ctx.closePath();
+  ctx.fill();ctx.stroke();
+
+  ctx.fillStyle='#0a0610';
+  ctx.beginPath();ctx.arc(-w*.16,-h*.135,w*.018,0,Math.PI*2);ctx.fill();
+
+  ctx.restore();
+
+  const dataUrl=c.toDataURL('image/png');
+
+  // Apply as favicon
+  const link=document.createElement('link');
+  link.rel='icon';link.type='image/png';link.href=dataUrl;
+  document.head.appendChild(link);
+
+  // Apply as apple-touch-icon (for "Add to Home Screen" on iOS)
+  const appleLink=document.createElement('link');
+  appleLink.rel='apple-touch-icon';appleLink.href=dataUrl;
+  document.head.appendChild(appleLink);
+
+  // Android/Chrome home screen icon via manifest-less meta
+  const manifestIcon=document.createElement('link');
+  manifestIcon.rel='shortcut icon';manifestIcon.href=dataUrl;
+  document.head.appendChild(manifestIcon);
+})();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:'Crimson Text',serif;color:#d4c9b0}
