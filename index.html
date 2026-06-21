@@ -2510,7 +2510,9 @@ function renderBirdTab(){
 // ============================================================
 function setActions(customActions){
   const acts=customActions||(G.loc?G.loc.actions():{context:'What do you do?',buttons:[]});
-  const buttons=(acts.buttons||[]).filter(Boolean);
+  // Always append universal actions (Look Around, Set Fire) unless explicitly suppressed
+  const universal = customActions&&customActions._noUniversal ? [] : universalActions();
+  const buttons=[...(acts.buttons||[]).filter(Boolean), ...universal];
 
   // Distribute buttons into tabs
   const talkKeywords=['speak','talk','meet','archivist','pelum','marta','vexis','oracle','blubberstiltskin','captain','keeper','npc','dialogue'];
