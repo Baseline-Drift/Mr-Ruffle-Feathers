@@ -259,7 +259,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 #action-grid{
   padding:4px 6px;
   display:flex;flex-direction:column;
-  max-height:42vh;
+  height:38vh;
   min-height:0;
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
@@ -561,8 +561,8 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
   #text-log{max-height:none}
   /* panel sizes to its content (flex-shrink:0 from base); capped so it can't swallow the screen */
   #action-panel{max-height:55vh}
-  /* button list scrolls internally, leaving the text log usable on short screens */
-  #action-grid{max-height:36vh}
+  /* button list is a fixed height so the bar never jumps between tabs; scrolls internally */
+  #action-grid{height:34vh}
   .act-btn{clip-path:none;border-radius:3px;font-size:.75rem}
   .overlay-box{padding:16px}
 }
@@ -591,7 +591,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;right:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-left-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C1</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C2</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -2017,8 +2017,9 @@ function showBirdCard(){
   if(bc('bc-toilet'))bc('bc-toilet').textContent=G.toiletCount||0;
   if(bc('bc-score'))bc('bc-score').textContent=G.score||0;
   ov.style.display='flex';
+  const g=document.getElementById('settings-gear');if(g)g.style.display='none';
 }
-function closeBirdCard(){const ov=document.getElementById('bird-card-overlay');if(ov)ov.style.display='none';}
+function closeBirdCard(){const ov=document.getElementById('bird-card-overlay');if(ov)ov.style.display='none';const g=document.getElementById('settings-gear');if(g)g.style.display='flex';}
 
 // ── LOG SCROLL ──
 function scrollLogToBottom(){
