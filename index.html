@@ -308,12 +308,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .gold-val{font-family:var(--mono);font-size:.68rem;color:var(--gold)}
 .status-txt{font-size:.6rem;color:var(--soft);text-align:center;font-style:italic;min-height:14px}
 
-/* Text Log */
-#text-log{
-  grid-column:1;grid-row:3;background:var(--bg);
-  border-bottom:1px solid var(--border);border-right:1px solid var(--border);
-  overflow-y:auto;padding:14px 16px;font-size:.95rem;line-height:1.75;
-}
+/* Text Log entry styles */
 .log-loc{font-family:'Cinzel',serif;font-size:.75rem;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .log-loc::after{content:'';flex:1;height:1px;background:var(--border)}
 .log-entry{margin-bottom:8px}
@@ -328,35 +323,6 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .log-entry.system{font-family:var(--mono);font-size:.72rem;color:var(--soft);border-left:2px solid var(--border);padding-left:8px}
 .log-entry.divider{text-align:center;color:var(--border-bright);letter-spacing:.3em;font-size:.75rem;margin:4px 0}
 
-/* Action Panel */
-#action-panel{
-  grid-column:1;grid-row:4;background:var(--stone);
-  border-top:1px solid var(--border);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;
-}
-#action-ctx-bar{
-  padding:6px 10px 4px;flex-shrink:0;
-}
-#action-grid{
-  flex:1;overflow-y:auto;padding:4px 8px 4px;
-  -webkit-overflow-scrolling:touch;
-  -webkit-mask-image:linear-gradient(to bottom, black calc(100% - 16px), transparent 100%);
-  mask-image:linear-gradient(to bottom, black calc(100% - 16px), transparent 100%);
-}
-#action-toolbar{
-  display:grid;grid-template-columns:1fr 1fr 1fr;
-  border-top:1px solid var(--border);flex-shrink:0;
-}
-.toolbar-btn{
-  background:var(--panel);border:none;border-right:1px solid var(--border);
-  color:var(--soft);padding:8px 4px 6px;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  font-family:var(--mono);transition:background .15s;
-}
-.toolbar-btn:last-child{border-right:none}
-.toolbar-btn:active{background:var(--stone)}
-.toolbar-btn span{font-size:.52rem;letter-spacing:.06em;text-transform:uppercase}
-.toolbar-btn:hover{background:rgba(201,168,76,.08);color:var(--gold)}
 .action-ctx{font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase;letter-spacing:.15em;margin-bottom:6px}
 .action-grid{display:flex;flex-direction:column;gap:5px;width:100%}
 .act-btn{
@@ -374,11 +340,6 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .act-btn.magic{border-color:#4a2d7a;color:#a07ad4}
 .act-btn.magic:hover{background:rgba(155,111,212,.15);border-color:var(--magic);color:var(--magic)}
 .act-btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
-
-/* ============================================================
-   MOBILE COMPACT HUD
-============================================================ */
-#mob-hud{display:none;background:var(--stone);border-bottom:1px solid var(--border);padding:6px 10px;align-items:center;gap:8px;flex-wrap:wrap;min-height:0}
 
 /* ============================================================
    OVERLAYS — shared base
@@ -544,9 +505,9 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
    CHARACTER SCREEN (tab modal)
 ============================================================ */
 #char-screen-overlay{z-index:215}
-.tab-bar{display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
-.tab-btn{font-family:'Cinzel',serif;font-size:.72rem;padding:7px 18px;background:transparent;border:none;color:var(--soft);cursor:pointer;letter-spacing:.08em;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.cs-tab-bar{display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.cs-tab-btn{font-family:'Cinzel',serif;font-size:.72rem;padding:7px 18px;background:transparent;border:none;color:var(--soft);cursor:pointer;letter-spacing:.08em;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.cs-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
 .tab-content{display:none}
 .tab-content.active{display:block;overflow-y:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
 /* Bag tab */
@@ -949,9 +910,9 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 <!-- CHARACTER SCREEN -->
 <div id="char-screen-overlay" class="overlay">
   <div class="overlay-box" style="max-width:440px">
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-pack-btn" onclick="switchTab('pack')">🎒 Bag</button>
-      <button class="tab-btn" id="tab-bird-btn" onclick="switchTab('bird')">🐦 Bird</button>
+    <div class="cs-tab-bar">
+      <button class="cs-tab-btn active" id="tab-pack-btn" onclick="switchTab('pack')">🎒 Bag</button>
+      <button class="cs-tab-btn" id="tab-bird-btn" onclick="switchTab('bird')">🐦 Bird</button>
       <button class="act-btn" style="margin-left:auto;font-size:.65rem;clip-path:none;border-radius:2px" onclick="closeCharScreen()">✕ Close</button>
     </div>
     <div class="tab-content active" id="tab-pack"></div>
