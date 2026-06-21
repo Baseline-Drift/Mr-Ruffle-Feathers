@@ -259,11 +259,14 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 #action-grid{
   padding:4px 6px;
   display:flex;flex-direction:column;
-  height:38vh;
-  min-height:0;
+  max-height:120px;min-height:0;
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
-  box-sizing:border-box;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  flex-shrink:0;box-sizing:border-box;
+  position:relative;
+  -webkit-transform:translateZ(0);transform:translateZ(0);
 }
 #action-grid::-webkit-scrollbar{width:4px}
 #action-grid::-webkit-scrollbar-track{background:rgba(255,255,255,.03)}
@@ -332,13 +335,14 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .act-btn{
   font-family:'Cinzel',serif;font-size:.72rem;color:var(--text);
   background:var(--panel);border:1px solid var(--border);
-  padding:10px 14px;cursor:pointer;text-align:center;
+  padding:7px 14px;cursor:pointer;text-align:center;
   transition:background .15s,border-color .15s,color .15s;letter-spacing:.04em;
   clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);
   white-space:normal;width:100%;display:block;
   line-height:1.3;
-  flex-shrink:0;min-height:40px;margin-bottom:4px;box-sizing:border-box;
+  flex-shrink:0;min-height:34px;margin-bottom:4px;box-sizing:border-box;
 }
+.act-btn:last-child{margin-bottom:0}
 .act-btn:hover{background:rgba(201,168,76,.12);border-color:var(--gold);color:var(--gold)}
 .act-btn.danger{border-color:#6a2222;color:#c07070}
 .act-btn.danger:hover{background:rgba(196,68,68,.15);border-color:var(--danger);color:var(--danger)}
@@ -561,8 +565,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
   #text-log{max-height:none}
   /* panel sizes to its content (flex-shrink:0 from base); capped so it can't swallow the screen */
   #action-panel{max-height:55vh}
-  /* button list is a fixed height so the bar never jumps between tabs; scrolls internally */
-  #action-grid{height:34vh}
+  /* action grid uses the fixed-height + touch-scroll recipe from the base rule */
   .act-btn{clip-path:none;border-radius:3px;font-size:.75rem}
   .overlay-box{padding:16px}
 }
@@ -591,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C2</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C8</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -653,7 +656,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
     <div id="action-ctx">WHAT DO YOU DO?</div>
     <div id="tab-bar">
       <button class="tab-btn active" id="tab-act" onclick="switchUITab('act')">
-        <span class="tab-icon">⚡</span><span class="tab-lbl">Act</span>
+        <span class="tab-icon">⚡</span><span class="tab-lbl">Action</span>
         <span class="tab-badge" id="badge-act" style="display:none"></span>
       </button>
       <button class="tab-btn" id="tab-talk" onclick="switchUITab('talk')">
@@ -2998,9 +3001,13 @@ function universalActions(){
 }
 
 function flapWings(){
+  if(!hasItem('feather')){
+    addLog('Mr. Ruffle Feathers flaps his wings vigorously. A single feather drifts to the floor — which he then picks up out of principle.','narrate');
+    giveItem('feather');
+    return;
+  }
   const lines=[
     'Mr. Ruffle Feathers flaps his wings vigorously. Several dust bunnies are mildly disturbed.',
-    'He flaps. Nothing of consequence occurs. A single feather drifts to the floor, which he then has to pick up out of principle.',
     'Vigorous wing-flapping ensues. The room is unimpressed. So, briefly, is he.',
     'He flaps his wings with the energy of someone proving a point to absolutely no one.',
     'Wings flap. Air moves slightly. This is, technically, an achievement.',
@@ -3147,7 +3154,6 @@ const LOCATIONS = {
         addLog('"I did not open the door for adventure. I opened it for the post."','ruffle');
         if(!hasItem('tea')){giveItem('tea');addLog('Your Space Thermos sits on the shelf. 3 doses. You packed it before you knew you\'d need it.','system')}
         if(!hasItem('scroll'))giveItem('scroll');
-        if(!hasItem('feather'))giveItem('feather');
         if(!hasItem('lighter')){giveItem('lighter');addLog('By the door — a battered lighter. You pick it up. It probably means nothing.','system')}
       } else {
         addLog("Back in the Nest. The kettle hisses. Nothing has exploded.",'narrate');
@@ -3791,7 +3797,8 @@ function vexisRepeat(){
 }
 
 function makeMarkedFeather(){
-  if(!hasItem('feather')||!hasItem('ink')){addLog('You need both the Fallen Feather and the Void Ink.','system');return}
+  if(!hasItem('feather')){addLog('You have no feather to inscribe. "I could flap about until one comes loose, I suppose. Undignified, but effective."','ruffle');return}
+  if(!hasItem('ink')){addLog('You need the Void Ink from Marta before the feather is any use.','system');return}
   removeItem('feather');removeItem('ink');giveItem('marked');G.flags.markedMade=true;
   addLog('You press your feather into the Void Ink. Ancient sigils breathe across the quill.','narrate');
   addLog('The Marked Feather pulses once, warm and certain.','narrate');
