@@ -138,8 +138,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 ============================================================ */
 #game-wrap{
   display:none;width:100%;height:100vh;
-  /*grid-template-columns:1fr 190px;
-  grid-template-rows:/*180px 0 1fr auto;
+  flex-direction:column;
 }
 #game-wrap.active{display:flex}
 
@@ -233,7 +232,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 /* Tab bar */
 #tab-bar{
   display:grid;
-  /*grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(4,1fr);
   border-bottom:1px solid var(--border);
   flex-shrink:0;
 }
@@ -581,8 +580,6 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
    MOBILE LAYOUT
 ============================================================ */
 @media(max-width:640px){  #game-wrap{
-    /*grid-template-columns:1fr;
-    grid-template-rows:/*120px auto 1fr minmax(180px, 260px);
     height:100vh;
   }
   #art-panel{height:120px;grid-row:1;grid-column:1}
