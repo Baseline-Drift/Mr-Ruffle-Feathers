@@ -921,7 +921,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
     <div class="cs-tab-bar">
       <button class="cs-tab-btn active" id="tab-pack-btn" onclick="switchTab('pack')">🎒 Bag</button>
       <button class="cs-tab-btn" id="tab-bird-btn" onclick="switchTab('bird')">🐦 Bird</button>
-      <button class="act-btn" style="margin-left:auto;font-size:.65rem;clip-path:none;border-radius:2px" onclick="closeCharScreen()">✕ Close</button>
+      <button class="act-btn" style="margin-left:auto;font-size:.65rem;clip-path:none;border-radius:2px;width:auto;flex-shrink:0;min-height:auto;margin-bottom:0;padding:6px 12px" onclick="closeCharScreen()">✕ Close</button>
     </div>
     <div class="tab-content active" id="tab-pack"></div>
     <div class="tab-content" id="tab-bird"></div>
@@ -3004,7 +3004,20 @@ function universalActions(){
   return [
     {label:'🔍 Look Around', fn:()=>lookAround()},
     {label:'🔥 Set Something on Fire', fn:()=>useLighter()},
+    {label:'🪶 Flap Wings', fn:()=>flapWings()},
   ];
+}
+
+function flapWings(){
+  const lines=[
+    'Mr. Ruffle Feathers flaps his wings vigorously. Several dust bunnies are mildly disturbed.',
+    'He flaps. Nothing of consequence occurs. A single feather drifts to the floor, which he then has to pick up out of principle.',
+    'Vigorous wing-flapping ensues. The room is unimpressed. So, briefly, is he.',
+    'He flaps his wings with the energy of someone proving a point to absolutely no one.',
+    'Wings flap. Air moves slightly. This is, technically, an achievement.',
+    'He flaps. A nearby dust bunny relocates two centimetres to the left. Mr. Ruffle Feathers considers this a victory.',
+  ];
+  addLog(lines[Math.floor(Math.random()*lines.length)], 'narrate');
 }
 
 function lookAround(){
