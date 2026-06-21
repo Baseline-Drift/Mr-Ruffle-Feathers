@@ -260,6 +260,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
   padding:4px 6px;
   display:flex;flex-direction:column;
   max-height:42vh;
+  min-height:0;
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
   box-sizing:border-box;
@@ -546,40 +547,22 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 ============================================================ */
 @media(max-width:640px){  #game-wrap{
     height:100vh;
+    height:100dvh;
   }
-  #art-panel{height:120px;grid-row:1;grid-column:1}
-  #char-panel{display:none!important;display:none}
+  #art-panel{height:120px}
+  #char-panel{display:none!important}
   #mob-hud{
-    display:flex;grid-row:2;grid-column:1;
+    display:flex;
     background:var(--stone);border-bottom:1px solid var(--border);
     padding:8px 10px;align-items:center;gap:10px;
     min-height:0;
   }
-  .mob-bird{font-size:1.8rem;flex-shrink:0;line-height:1}
-  .mob-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-  .mob-name{font-family:'Cinzel',serif;font-size:.65rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mob-title{font-size:.58rem;color:var(--magic);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
-  .mob-bars{display:flex;gap:5px;align-items:center}
-  .mob-bar-label{font-family:var(--mono);font-size:.58rem;color:var(--soft);flex-shrink:0}
-  .mob-bar{width:80px;min-width:40px;height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;flex-shrink:1}
-  .mob-bar-fill{display:block;height:100%;border-radius:4px;transition:width .4s}
-  .mob-stats-row{display:flex;align-items:center;justify-content:space-between;margin-top:1px}
-  .mob-stats{font-family:var(--mono);font-size:.6rem;color:var(--soft);white-space:nowrap}
-  .mob-gold{font-family:var(--mono);font-size:.65rem;color:var(--gold);white-space:nowrap;flex-shrink:0}
-  .mob-lighter{font-family:var(--mono);font-size:.65rem;color:var(--danger);white-space:nowrap;flex-shrink:0}
-  .mob-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
-  .mob-tab-btn{
-    background:var(--panel);border:1px solid var(--border);
-    font-size:.7rem;color:var(--text);
-    padding:6px 10px;cursor:pointer;white-space:nowrap;
-    transition:border-color .15s,color .15s;
-    display:flex;flex-direction:column;align-items:center;gap:1px;
-    min-width:46px;
-  }
-  .mob-tab-btn span{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.05em}
-  .mob-tab-btn:hover{border-color:var(--gold);color:var(--gold)}
-  #text-log{grid-row:3;grid-column:1;max-height:none;height:100%}
-  #action-panel{grid-row:4;grid-column:1;max-height:200px}
+  /* text log absorbs all leftover vertical space; flex:1 + min-height:0 from base */
+  #text-log{max-height:none}
+  /* panel sizes to its content (flex-shrink:0 from base); capped so it can't swallow the screen */
+  #action-panel{max-height:55vh}
+  /* button list scrolls internally, leaving the text log usable on short screens */
+  #action-grid{max-height:36vh}
   .act-btn{clip-path:none;border-radius:3px;font-size:.75rem}
   .overlay-box{padding:16px}
 }
@@ -1989,7 +1972,16 @@ function switchUITab(tab){
 function renderTabActions(tab){
   const grid=document.getElementById('action-grid');if(!grid)return;
   grid.innerHTML='';
-  (_tabActions[tab]||[]).forEach(b=>{
+  const list=_tabActions[tab]||[];
+  if(!list.length){
+    const empty=document.createElement('div');
+    empty.style.cssText='color:var(--soft);font-size:.72rem;font-style:italic;text-align:center;padding:14px 8px;font-family:var(--mono)';
+    const msgs={act:'Nothing to do right now.',talk:'Nobody here to speak to.',go:'Nowhere to go from here.',look:'Nothing catches your eye.'};
+    empty.textContent=msgs[tab]||'Nothing here.';
+    grid.appendChild(empty);
+    return;
+  }
+  list.forEach(b=>{
     const btn=document.createElement('button');
     btn.className='act-btn'+(b.cls?' '+b.cls:'');
     btn.innerHTML=`${b.icon?`<span style="font-size:.9rem;flex-shrink:0">${b.icon}</span>`:''}${b.label}${b.sub?`<span style="font-size:.52rem;color:var(--soft);font-family:var(--mono);margin-left:auto">${b.sub}</span>`:''}`;
