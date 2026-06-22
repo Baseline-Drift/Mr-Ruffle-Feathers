@@ -259,7 +259,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 #action-grid{
   padding:4px 6px;
   display:flex;flex-direction:column;
-  max-height:120px;min-height:0;
+  height:132px;min-height:0;
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C13</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C15</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -753,6 +753,16 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
         <div style="font-size:.85rem">🚽</div>
         <div style="font-family:var(--mono);font-size:.9rem;color:var(--soft)" id="bc-toilet">0</div>
         <div style="font-family:var(--mono);font-size:.42rem;color:var(--soft)">VISITS</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);padding:7px;border-radius:3px;text-align:center">
+        <div style="font-size:.85rem">🪶</div>
+        <div style="font-family:var(--mono);font-size:.9rem;color:var(--soft)" id="bc-flap">0</div>
+        <div style="font-family:var(--mono);font-size:.42rem;color:var(--soft)">FLAPS</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);padding:7px;border-radius:3px;text-align:center">
+        <div style="font-size:.85rem">🕊</div>
+        <div style="font-family:var(--mono);font-size:.9rem;color:var(--soft)" id="bc-coo">0</div>
+        <div style="font-family:var(--mono);font-size:.42rem;color:var(--soft)">COOS</div>
       </div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--gold-dim);padding:10px;border-radius:3px;text-align:center">
@@ -1110,13 +1120,32 @@ function calcTitleBase(stats){
   return prefix+(titles[dominant][max]||'Ordinary Bird');
 }
 
+function calcPigeonAffix(){
+  if(!G) return '';
+  const t=G.toiletCount||0, f=G.flapCount||0, c=G.cooCount||0;
+  const total=t+f+c;
+  if(total<10) return '';
+  // One behaviour dominating 60%+ of the total earns a "Sirrah" title
+  if(t/total>=0.6) return ', Sirrah Poopsalot';
+  if(c/total>=0.6) return ', Sirrah Coosington';
+  if(f/total>=0.6) return ', Sirrah Flappingham';
+  // Otherwise a well-rounded degenerate climbs the Pigeon ladder
+  let p;
+  if(total>=200) p='A Menace, Frankly';
+  else if(total>=100) p="The Pigeon's Pigeon";
+  else if(total>=50) p='Peak Pigeon';
+  else if(total>=25) p='Quite Pigeon';
+  else p='Somewhat Pigeon';
+  return ', '+p;
+}
+
 function buildFullTitle(){
   if(!G) return 'Ordinary Bird';
   const base = G.mirrorUsed ? calcTitleBase(G) : 'Ordinary Bird';
   const storyAffix = G.flags.dovecoteDone ? 'The Chosen ' : '';
   const chaosAffix = G.fireCount >= 2 ? ', Arsonist' : '';
   const behavAffix = G.flags.fleeCount >= 2 ? ', Coward' : '';
-  return storyAffix + base + chaosAffix + behavAffix;
+  return storyAffix + base + chaosAffix + behavAffix + calcPigeonAffix();
 }
 
 function initGame(){
@@ -1133,6 +1162,8 @@ function initGame(){
     mirrorUsed:false,
     fireCount:0,
     toiletCount:0,
+    flapCount:0,
+    cooCount:0,
     bonusPoints:0,
     titleName:'',
     _bananaSpawned:false,
@@ -1188,7 +1219,7 @@ function playTitleMusic(){
       if(musicGeneration!==gen)return; // stale loop — abort
       melody.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='square';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.08,startT);
         g.gain.exponentialRampToValueAtTime(0.001,startT+dur*0.9);
@@ -1231,7 +1262,7 @@ function playExploreMusic(){
       let t=startT;
       melody.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='triangle';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.06,t);
         g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.85);
@@ -1241,7 +1272,7 @@ function playExploreMusic(){
       t=startT;
       bass.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='sine';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.04,t);
         g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.9);
@@ -1288,7 +1319,7 @@ function playGreensleeves(){
       let t=startT;
       melody.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='square';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.07,t);
         g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.88);
@@ -1334,7 +1365,7 @@ function playAsteroidMusic(){
       // Driving bass - sawtooth
       bass.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='sawtooth';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.08,t);
         g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.7);
@@ -1344,7 +1375,7 @@ function playAsteroidMusic(){
       t=startT;
       melody.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='square';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.05,t);
         g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.8);
@@ -1377,7 +1408,7 @@ function playCombatMusic(){
       if(musicGeneration!==gen)return;
       theme.forEach(([freq,dur])=>{
         const osc=ctx.createOscillator();const g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
+        osc.connect(g);g.connect(getMaster());
         osc.type='sawtooth';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.06,startT);
         g.gain.exponentialRampToValueAtTime(0.001,startT+dur*0.8);
@@ -1466,11 +1497,27 @@ function closeHistory(){document.getElementById('history-overlay').classList.rem
 // ============================================================
 let audioCtx = null;
 function getAudio(){
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    // Master bus: gain -> compressor -> destination. Evens out levels and tames loud peaks.
+    try{
+      const mg=audioCtx.createGain();
+      mg.gain.setValueAtTime(0.9,audioCtx.currentTime);
+      const comp=audioCtx.createDynamicsCompressor();
+      comp.threshold.setValueAtTime(-20,audioCtx.currentTime);
+      comp.knee.setValueAtTime(12,audioCtx.currentTime);
+      comp.ratio.setValueAtTime(6,audioCtx.currentTime);
+      comp.attack.setValueAtTime(0.003,audioCtx.currentTime);
+      comp.release.setValueAtTime(0.25,audioCtx.currentTime);
+      mg.connect(comp);comp.connect(audioCtx.destination);
+      audioCtx._master=mg;
+    }catch(e){audioCtx._master=audioCtx.destination;}
+  }
   // Resume if suspended (browser autoplay policy)
   if(audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
+function getMaster(){const c=getAudio();return c._master||c.destination;}
 // Unlock audio on first user interaction
 function unlockAudio(){
   if(!audioCtx){
@@ -1504,7 +1551,7 @@ function playTone(freq, dur, type='sine', vol=0.3, delay=0){
     const ctx=getAudio();
     const osc=ctx.createOscillator();
     const gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
+    osc.connect(gain);gain.connect(getMaster());
     osc.type=type;osc.frequency.setValueAtTime(freq,ctx.currentTime+delay);
     gain.gain.setValueAtTime(vol,ctx.currentTime+delay);
     gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
@@ -1521,7 +1568,7 @@ function playNoise(dur, vol=0.15, delay=0){
     for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
     const src=ctx.createBufferSource();
     const gain=ctx.createGain();
-    src.buffer=buf;src.connect(gain);gain.connect(ctx.destination);
+    src.buffer=buf;src.connect(gain);gain.connect(getMaster());
     gain.gain.setValueAtTime(vol,ctx.currentTime+delay);
     gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
     src.start(ctx.currentTime+delay);
@@ -1567,7 +1614,7 @@ const SFX = {
     try{
       const ctx=getAudio();
       const osc=ctx.createOscillator();const gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
+      osc.connect(gain);gain.connect(getMaster());
       osc.type='sawtooth';
       osc.frequency.setValueAtTime(400,ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(60,ctx.currentTime+1.2);
@@ -1588,7 +1635,7 @@ function restoreNormalHUD(){
   const hud=document.getElementById('mob-hud'); if(hud) hud.style.display='';
   const gear=document.getElementById('settings-gear'); if(gear) gear.style.display='flex';
 }
-function showVictoryScreen(callback){
+function showVictoryScreen(callback,stats){
   _victoryCallback=callback;
   SFX.victory&&SFX.victory();
   // Remove any existing victory overlay
@@ -1598,8 +1645,9 @@ function showVictoryScreen(callback){
   const overlay=document.createElement('div');
   overlay.id='victory-overlay';
   overlay.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(13,10,15,.92);display:flex;align-items:center;justify-content:center;animation:fadein .3s ease';
-  const dmgDealt=combatState?combatState.maxHp-combatState.hp:0;
-  const roundsSurvived=combatState?combatState.round:0;
+  const dmgDealt=(stats&&stats.dmg!=null)?stats.dmg:(combatState?combatState.maxHp-combatState.hp:0);
+  const roundsSurvived=(stats&&stats.rounds!=null)?stats.rounds:(combatState?combatState.round:0);
+  const hpLeft=(stats&&stats.hp!=null)?stats.hp:G.hp;
   overlay.innerHTML=`
     <div style="text-align:center;max-width:360px;width:90%;padding:24px">
       <div style="font-size:2.5rem;margin-bottom:8px;animation:bob 1s ease-in-out infinite">🏆</div>
@@ -1608,7 +1656,7 @@ function showVictoryScreen(callback){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
         <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Rounds</div><div style="font-family:Cinzel,serif;font-size:1.2rem;color:var(--gold)">${roundsSurvived}</div></div>
         <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Damage Dealt</div><div style="font-family:Cinzel,serif;font-size:1.2rem;color:var(--success)">${dmgDealt}</div></div>
-        <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">HP Left</div><div style="font-family:Cinzel,serif;font-size:1.2rem;color:var(--danger)">${G.hp}</div></div>
+        <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">HP Left</div><div style="font-family:Cinzel,serif;font-size:1.2rem;color:var(--danger)">${hpLeft}</div></div>
       </div>
       <div style="font-size:.85rem;color:var(--soft);font-style:italic;margin-bottom:20px">"${getVictoryQuote()}"</div>
       <button class="btn-primary" id="${btnId}">Continue →</button>
@@ -2000,6 +2048,7 @@ function renderTabActions(tab){
     btn.onclick=b.fn;
     grid.appendChild(btn);
   });
+  grid.scrollTop=0;
 }
 
 function updateTabBadges(){
@@ -2026,6 +2075,8 @@ function showBirdCard(){
   if(bc('bc-gold'))bc('bc-gold').textContent=G.gold;
   if(bc('bc-fires'))bc('bc-fires').textContent=G.fireCount||0;
   if(bc('bc-toilet'))bc('bc-toilet').textContent=G.toiletCount||0;
+  if(bc('bc-flap'))bc('bc-flap').textContent=G.flapCount||0;
+  if(bc('bc-coo'))bc('bc-coo').textContent=G.cooCount||0;
   if(bc('bc-score'))bc('bc-score').textContent=G.score||0;
   ov.style.display='flex';
   const g=document.getElementById('settings-gear');if(g)g.style.display='none';
@@ -3023,6 +3074,7 @@ function universalActions(){
 }
 
 function flapWings(){
+  G.flapCount=(G.flapCount||0)+1;
   if(!hasItem('feather')){
     addLog('Mr. Ruffle Feathers flaps his wings vigorously. A single feather drifts to the floor — which he then picks up out of principle.','narrate');
     giveItem('feather');
@@ -3040,6 +3092,38 @@ function flapWings(){
 
 function cooPointlessly(){
   pigeonCoo();
+  G.cooCount=(G.cooCount||0)+1;
+  const loc=G.loc?G.loc.id:'';
+  // ── Wraith Corridors: cooing recruits wraiths, escalating to a fused fight ──
+  if(loc==='corridors' && !G.flags.wraith1Done){
+    G.flags.wraithCoos=(G.flags.wraithCoos||0)+1;
+    const wc=G.flags.wraithCoos;
+    if(wc===1) addLog('He coos at the nearest Wraith. It pauses — then, from somewhere deep in the dark, it coos back. Wrongly. But it tries.','narrate');
+    else if(wc===2) addLog('He coos again. Two of them answer — a low, hollow sound, like wind through an empty hull. He finds it oddly companionable.','narrate');
+    else if(wc===3) addLog('All three coo back in unison. "Are… are we friends now?" Mr. Ruffle Feathers asks. Nobody is sure. Least of all the Wraiths.','narrate');
+    else {
+      addLog('You coo a fourth time. The universe goes silent.','narrate');
+      addLog('Then, from nowhere and everywhere: "Really?! You want a fourth?" There is no fourth. There were only ever three.','magic');
+      addLog('Mr. Ruffle Feathers, caught, says nothing. The three press together and begin to fuse.','narrate');
+      setTimeout(()=>startWraithFight(true),1600);
+    }
+    setActions();switchUITab('talk');
+    return;
+  }
+  // ── Vacuum / deep space: does a coo even make a sound out here? ──
+  if(loc==='hollow_star'||loc==='coop69'){
+    const vac=[
+      'Mr. Ruffle Feathers coos. In the vacuum, no one hears it. Possibly not even him.',
+      "If a pigeon coos in space and there's no air to carry it, did he coo at all? He refuses to think about this.",
+      'He coos. The sound waves, finding no medium, simply give up. Relatable.',
+      'A coo escapes. It travels precisely nowhere — technically the most pointless coo yet.',
+      'He coos at the stars. The stars, being several light-years and one vacuum away, do not engage.',
+      'He opens his beak. He coos. Reality, citing the absence of atmosphere, marks it "unverified."',
+    ];
+    addLog(vac[Math.floor(Math.random()*vac.length)],'narrate');
+    return;
+  }
+  // ── Default: empty room vs people present ──
   _cooCount++;
   let pool;
   if(_peopleHere){
@@ -3354,8 +3438,9 @@ const LOCATIONS = {
     actions(){
       const btns=[];
       if(!G.flags.wraith1Done){
-        btns.push({label:'⚔ Fight the Patrol Wraith',fn:()=>wraith1Fight(),cls:'danger'});
-        btns.push({label:'🎭 Attempt to Outwit It',fn:()=>wraith1Outwit()});
+        const n=Math.min(3,1+(G.flags.wraithCoos||0));
+        btns.push({label:n>1?'⚔ Fight the Wraiths':'⚔ Fight the Patrol Wraith',fn:()=>wraith1Fight(),cls:'danger'});
+        btns.push({label:n>1?'🎭 Attempt to Slip Past':'🎭 Attempt to Outwit It',fn:()=>wraith1Outwit()});
       }
       if(G.flags.wraith1Done)btns.push({label:'🚀 Enter the Docking Bay',fn:()=>travelTo('docking')});
       btns.push({label:'← Retreat to Market',fn:()=>travelTo('market')});
@@ -4016,23 +4101,41 @@ function readLivingBook(){
   addScore(60);G.titleName='Chosen Bird';updateHUD();setActions();
 }
 
-function wraith1Fight(){
-  startCombat({name:'Patrol Wraith',icon:'👻',hp:12,maxHp:12,pluck:2},
-    ()=>{G.flags.wraith1Done=true;G.flags.wraith1Defeated=true;addLog('The Patrol Wraith disperses with a sound like tearing paper.','good');addScore(40);setActions()},
+function startWraithFight(skipFusion){
+  const n=Math.min(3,1+(G.flags.wraithCoos||0));
+  const NAME={1:'Patrol Wraith',2:'Wraith²',3:'Wraith³'};
+  const HP={1:12,2:24,3:36};
+  const enemy={name:NAME[n],icon:'👻',hp:HP[n],maxHp:HP[n],pluck:1+n};
+  const begin=()=>startCombat(enemy,
+    ()=>{G.flags.wraith1Done=true;G.flags.wraith1Defeated=true;addLog(`${enemy.name} disperses with a sound like tearing paper.`,'good');addScore(40+(n-1)*30);setActions()},
     (r)=>{if(r==='fled'){setActions()}else deathScreen()}
   );
+  if(n>1 && !skipFusion){
+    addLog('The wraiths drift together. A pause. Then — inexplicably, and with what can only be described as choreography — they begin to dance.','narrate');
+    addLog('Fingertips touch. Hollow shapes press into one. "Did they just—" Mr. Ruffle Feathers starts. They did. They absolutely did.','ruffle');
+    addLog(`Where there were ${n===3?'three':'two'}, now there is One, and it is significantly more annoyed.`,'narrate');
+    setTimeout(begin,1700);
+  } else {
+    begin();
+  }
 }
+function wraith1Fight(){startWraithFight(false);}
 function wraith1Outwit(){
-  rollDice('Outwit the Patrol Wraith','wit',13,(outcome)=>{
+  const n=Math.min(3,1+(G.flags.wraithCoos||0));
+  const dc=13+2*(n-1);
+  const many=n>1;
+  rollDice('Slip Past the Wraith'+(many?'s':''),'wit',dc,(outcome)=>{
     if(outcome==='crit'||outcome==='success'){
-      addLog('You produce the Prophecy Scroll. The Wraith halts, seems to listen, then drifts aside.','good');
+      addLog(many
+        ? 'You produce the Prophecy Scroll. The Wraiths halt, seem to listen, then drift aside as one.'
+        : 'You produce the Prophecy Scroll. The Wraith halts, seems to listen, then drifts aside.','good');
       addLog('"Even undead entities respect documentation."','ruffle');
       G.flags.wraith1Done=true;addScore(50);
     } else if(outcome==='partial'){
-      addLog('The Wraith is confused but not convinced. It lashes out. -4 HP.','bad');loseHp(4);
+      addLog(many?'The Wraiths are confused but not convinced. They lash out. -4 HP.':'The Wraith is confused but not convinced. It lashes out. -4 HP.','bad');loseHp(4);
       addLog('You slip past in the distraction.','narrate');G.flags.wraith1Done=true;
     } else {
-      addLog('The Wraith is entirely unimpressed by your rhetoric. -6 HP.','bad');loseHp(6);
+      addLog(many?'The Wraiths are entirely unimpressed by your rhetoric. -6 HP.':'The Wraith is entirely unimpressed by your rhetoric. -6 HP.','bad');loseHp(6);
     }
     setActions();
   });
@@ -4638,7 +4741,7 @@ function showSpaceCombat(enemy, onWin, onLose){
           const g2=document.getElementById('settings-gear');if(g2)g2.style.display='flex';
           const _win=_scOnWin||window._keithOnWin;
           combatState=null;
-          showVictoryScreen(()=>{if(_win)_win();});
+          showVictoryScreen(()=>{if(_win)_win();},{rounds:round,dmg:enemy.hp-enemyHp,hp:podHp});
           return;
         }
       } else scLog('Miss! Shot goes wide.');
@@ -4663,7 +4766,7 @@ function showSpaceCombat(enemy, onWin, onLose){
         const g2=document.getElementById('settings-gear');if(g2)g2.style.display='flex';
         const _win=_scOnWin||window._keithOnWin;
         combatState=null;
-        showVictoryScreen(()=>{if(_win)_win();});
+        showVictoryScreen(()=>{if(_win)_win();},{rounds:round,dmg:enemy.hp-enemyHp,hp:podHp});
         return;
       }
     }
@@ -4683,7 +4786,7 @@ function showSpaceCombat(enemy, onWin, onLose){
         const g2=document.getElementById('settings-gear');if(g2)g2.style.display='flex';
         const _win=_scOnWin||window._keithOnWin;
         combatState=null;
-        showVictoryScreen(()=>{if(_win)_win();});
+        showVictoryScreen(()=>{if(_win)_win();},{rounds:round,dmg:enemy.hp-enemyHp,hp:podHp});
         return;
       }
     }
@@ -4770,7 +4873,7 @@ function captainSway(){
 }
 
 function captainFight(){
-  startCombat({name:'Wraith Captain',icon:'🗡️',hp:20,maxHp:20,pluck:4},
+  startCombat({name:'Wraith Captain',icon:'🗡️',hp:34,maxHp:34,pluck:5},
     ()=>{
       G.flags.captainDone=true;
       addLog('The Wraith Captain shatters like a bell breaking. The Containment Key falls from the void.','good');
