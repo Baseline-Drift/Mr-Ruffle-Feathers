@@ -456,6 +456,16 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .pat-cell.lit{background:rgba(201,168,76,.2);border-color:var(--gold)}
 .pat-cell.correct{background:rgba(74,154,90,.2);border-color:var(--success)}
 .pat-cell.wrong{background:rgba(196,68,68,.2);border-color:var(--danger)}
+.lift-title{font-family:Cinzel,serif;font-size:1.2rem;color:var(--gold);text-align:center;margin-bottom:2px}
+.lift-sub{font-family:var(--mono);font-size:.58rem;color:var(--soft);text-align:center;margin-bottom:8px;letter-spacing:.05em}
+.lift-deck{font-family:var(--mono);font-size:.62rem;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin:11px 0 4px;border-bottom:1px solid var(--border);padding-bottom:3px}
+.lift-room{font-family:Cinzel,serif;font-size:.95rem;color:var(--text);padding:9px 10px;margin:3px 0;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:background .15s,border-color .15s}
+.lift-room[data-r]:hover{border-color:var(--gold);background:rgba(201,168,76,.08)}
+.lift-room.here{color:var(--soft);border-style:dashed;cursor:default}
+.lift-room.closed{color:var(--soft);opacity:.6}
+.lift-tag{font-family:var(--mono);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-left:6px}
+.lift-status{font-family:var(--mono);font-size:.62rem;color:var(--soft);min-height:1.2em;margin:8px 2px;line-height:1.45}
+.lift-btn-close{display:block;width:100%;margin-top:12px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.7rem;cursor:pointer}
 .pat-status{text-align:center;font-size:.82rem;color:var(--soft);min-height:18px}
 /* Timing */
 #timing-track{width:100%;height:52px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden;margin-bottom:8px}
@@ -594,7 +604,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C16</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C18</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -2602,18 +2612,9 @@ function setActions(customActions){
     tabs.act=buttons;
   }
 
-  // Quick-travel: jump straight to any visited room in the same zone (no more Market-hopping)
-  const ZONE={nest:'station',facilities:'station',antechamber:'station',market:'station',dovecote:'station',corridors:'station',docking:'station',basement:'station',library:'station',coop69:'void',hollow_star:'void'};
-  const SHORT={nest:'Nest',facilities:'Facilities',antechamber:'Antechamber',market:'Market',dovecote:'Dovecote',corridors:'Corridors',docking:'Docking',basement:'Basement',library:'Library',coop69:'Coop 69',hollow_star:'Hollow Star'};
-  if(G.loc && G.visited){
-    const curZone=ZONE[G.loc.id]||'station';
-    Object.keys(G.visited).forEach(locId=>{
-      if(locId===G.loc.id || !LOCATIONS[locId]) return;
-      if((ZONE[locId]||'station')!==curZone) return;
-      const key=SHORT[locId]||LOCATIONS[locId].name;
-      if(tabs.go.some(b=>(b.label||'').includes(key))) return; // room already offers this exit
-      tabs.go.push({label:'→ '+LOCATIONS[locId].name, fn:()=>travelTo(locId)});
-    });
+  // Station lift: one button on any deck room; the lift overlay handles room-to-room travel
+  if(G.loc && roomDeck(G.loc.id)){
+    tabs.go.push({label:'🛗 Take the Lift', fn:()=>openLift()});
   }
 
   // People present = real talk options (NPCs) exist before we add the universal coo
@@ -3294,8 +3295,6 @@ const LOCATIONS = {
       const btns=[
         {label:'📖 Read the Scroll',fn:()=>{if(hasItem('scroll'))useItem(ITEMS.scroll);else addLog('You have already read the scroll.','system')}},
         {label:'🪞 Study the Mirror',fn:()=>openMirror(),cls:'magic'},
-        {label:'🚪 Go to the Antechamber',fn:()=>travelTo('antechamber')},
-        {label:'🛍 Go to the Void Market',fn:()=>travelTo('market')},
         {label:'🚻 The Facilities',fn:()=>travelTo('facilities')},
       ];
       if(G.flags.nestVisited)btns.push({label:'😴 Long Rest (Full HP & MP)',fn:()=>{G.hp=G.maxHp;G.mp=G.maxMp;updateHUD();addLog('You sleep properly. HP and MP fully restored.','good')}});
@@ -3342,10 +3341,6 @@ const LOCATIONS = {
       if(!G.flags.metVexis)btns.push({label:'👁 Approach the Oracle',fn:()=>meetVexis()});
       else btns.push({label:'👁 Speak to Oracle Vexis Again',fn:()=>vexisRepeat()});
       if(G.flags.vexisGaveTask&&!G.flags.markedMade)btns.push({label:'🪶 Combine Feather + Ink',fn:()=>makeMarkedFeather(),cls:'magic'});
-      btns.push({label:'🏠 Return to Nest',fn:()=>travelTo('nest')});
-      btns.push({label:'🛍 Go to Market',fn:()=>travelTo('market')});
-      btns.push({label:'🕊️ Go to the Dovecote',fn:()=>travelTo('dovecote')});
-      if(G.flags.dovecoteDone)btns.push({label:'💀 Wraith Corridors',fn:()=>travelTo('corridors'),cls:'danger'});
       return {context:"The Oracle's presence fills the room.",buttons:[...btns]};
     }
   },
@@ -3364,12 +3359,7 @@ const LOCATIONS = {
     actions(){
       return {context:'The market hums with strange commerce.',buttons:[
         {label:'🛍 Browse Marta\'s Stall',fn:()=>martaShop()},
-        {label:'🏠 Return to Nest',fn:()=>travelTo('nest')},
-        {label:'🚪 Go to Antechamber',fn:()=>travelTo('antechamber')},
-        {label:'🕊️ Go to the Dovecote',fn:()=>travelTo('dovecote')},
-        {label:'💀 Wraith Corridors',fn:()=>travelTo('corridors'),cls:'danger'},
         G.flags.basementHinted||G.flags.basementVisited?{label:'🚪 The Basement Hatch',fn:()=>travelTo('basement')}:null,
-        G.flags.pelumDirected||G.flags.libraryVisited?{label:'📚 The Pigeon Library',fn:()=>travelTo('library')}:null,
       ].filter(Boolean)};
     }
   },
@@ -3407,8 +3397,7 @@ const LOCATIONS = {
         addLog('The Echo Orb drifts into your wing, warm as a held secret.','magic');
         setActions();
       }});
-      btns.push({label:'← Return to Market',fn:()=>travelTo('market')});
-      btns.push({label:'💀 Enter Wraith Corridors',fn:()=>travelTo('corridors'),cls:'danger'});
+      btns.push({label:'💀 Enter Wraith Corridors',fn:()=>securityPigeon(),cls:'danger'});
       return {context:'The Dovecote listens to your every step.',buttons:[...btns]};
     }
   },
@@ -3434,7 +3423,7 @@ const LOCATIONS = {
         btns.push({label:n>1?'🎭 Attempt to Slip Past':'🎭 Attempt to Outwit It',fn:()=>wraith1Outwit()});
       }
       if(G.flags.wraith1Done)btns.push({label:'🚀 Enter the Docking Bay',fn:()=>travelTo('docking')});
-      btns.push({label:'← Retreat to Market',fn:()=>travelTo('market')});
+      btns.push({label:'← Retreat to the Dovecote',fn:()=>travelTo('dovecote')});
       return {context:'Darkness presses in. Something moves.',buttons:[...btns]};
     }
   },
@@ -3568,12 +3557,63 @@ const LOCATIONS = {
         {label:'📚 Speak to Archivist Pelum',fn:()=>meetPelum()},
         {label:'📖 Browse the Stacks',fn:()=>browseLibrary()},
         {label:'📜 Read Library Volumes',tab:'act',fn:()=>showLibraryBooks()},
-        {label:'← Return to Market',fn:()=>travelTo('market')},
       ];
       return {context:'Ancient knowledge hums in the walls.',buttons:btns};
     }
   },
 };
+
+const DECKS=[
+  {name:'Habitation Deck', rooms:['nest']},
+  {name:'Commerce Deck', rooms:['market','library']},
+  {name:'Sanctum Deck', rooms:['antechamber','dovecote']},
+];
+function roomDeck(id){return DECKS.find(d=>d.rooms.includes(id))||null;}
+function roomUnlocked(id){
+  if(id==='library') return !!(G.flags.pelumDirected||G.flags.libraryVisited);
+  return true; // nest, market, antechamber, dovecote are always reachable
+}
+function openLift(){
+  let html='<div class="lift-title">🛗 Station Lift</div><div class="lift-sub">Select a destination.</div>';
+  DECKS.forEach(d=>{
+    const rooms=d.rooms.filter(r=>roomUnlocked(r));
+    const isCommerce=(d.name==='Commerce Deck');
+    if(!rooms.length && !isCommerce) return;
+    html+=`<div class="lift-deck">${d.name}</div>`;
+    rooms.forEach(r=>{
+      const here=G.loc&&G.loc.id===r;
+      const nm=LOCATIONS[r].name;
+      html+= here
+        ? `<div class="lift-room here">${nm} <span class="lift-tag">you are here</span></div>`
+        : `<div class="lift-room" data-r="${r}">→ ${nm}</div>`;
+    });
+    if(isCommerce) html+='<div class="lift-room closed" id="lift-dining">✕ Dining Hall <span class="lift-tag">closed</span></div>';
+  });
+  html+='<div class="lift-status" id="lift-status"></div>';
+  html+='<button class="lift-btn-close" id="lift-close-btn">Close</button>';
+  showMG(html,null);
+  document.querySelectorAll('#mg-box .lift-room[data-r]').forEach(el=>{
+    el.onclick=()=>{const r=el.dataset.r;closeMG();travelTo(r);};
+  });
+  const dining=document.getElementById('lift-dining');
+  if(dining)dining.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='Dining Hall — CLOSED FOLLOWING AN INCIDENT. No further detail is offered. The faint smell offers some, unprompted. Mr. Ruffle Feathers elects not to investigate, for once in his life.';};
+  const cl=document.getElementById('lift-close-btn');if(cl)cl.onclick=()=>closeMG();
+}
+function securityPigeon(){
+  if(G.flags.dovecoteDone){
+    addLog("The security pigeon glances at the Dovecote’s mark on your feather, nods once, and steps aside. \"Cleared. Good luck in there.\"",'speech');
+    addLog('A pause. "Genuinely. I\'ve seen the footage."','speech');
+    setTimeout(()=>travelTo('corridors'),500);
+    return;
+  }
+  showModal('🦺','Station Security',
+    'A pigeon in a high-visibility tabard steps forward. "Halt. This area is, ah, restricted. Very haunted. Lot of wraiths." He checks a clipboard that is, you note, completely blank. "Do you have clearance?"',
+    [
+      {label:'"No, not yet."',fn:()=>{closeModal();addLog('"Right. Then I must firmly — and I cannot stress this enough — suggest you don\'t. I won\'t physically stop you. I\'m not contractually obliged to. But I\'d feel better."','speech');setActions();}},
+      {label:'Push past anyway →',fn:()=>{closeModal();addLog('You step past him into the dark. He sighs the sigh of a bird who will now have to fill in a form about this.','narrate');setTimeout(()=>travelTo('corridors'),400);}},
+    ]
+  );
+}
 
 function browseLibrary(){
   G.flags.librarySearched=true;
@@ -3709,6 +3749,21 @@ const LORE_BOOKS = [
       '"An administrative error," Mr. Ruffle Feathers repeats.',
       '"It is in the footnotes," Pelum says. "Footnote forty-two."',
       '"Of course it is."',
+    ]
+  },
+  {
+    id:'lore_outbreaks',
+    title:'Wraith Outbreaks: A Recurring Inconvenience',
+    author:'Archivist Pelum, Vol. 11',
+    lines:[
+      '"Wraith outbreaks are not new. The Archive records them arriving in waves — every few decades, sometimes longer — lingering, then receding. The official classification is \'a recurring inconvenience,\' which undersells matters considerably."',
+      '"This wave is recent. A few weeks, no more. Until then the Wraith Corridors were an ordinary thoroughfare — deliveries came through the Docking Bay daily. Then the dark thickened, the crew who lingered stopped returning, and the supply runs stopped with them."',
+      '"Every recorded outbreak aligns with a stirring of the Hollow Star. The Archive lists this as coincidence. The Archive is, on this single point, almost certainly lying to itself."',
+      '"Footnote 11(b): a side effect noted across several outbreaks — the Great Experiment left certain pigeons with an involuntary bowel response under acute distress. Wraiths constitute acute distress. The Dining Hall closure is, the Archive suspects, a related matter. No one has volunteered details."',
+      '"Why pigeons?" Mr. Ruffle Feathers asks, in the voice of a bird bracing for an answer about himself.',
+      '"The Experiment granted intellect," Pelum says. "It did not see fit to include composure. An oversight, much like the rest of it."',
+      '"...And does this affect me?"',
+      '"Statistically," says Pelum, and turns the page before he can be asked to elaborate.',
     ]
   },
 ];
@@ -4887,9 +4942,8 @@ function faceFinalBoss(){
   addLog('"Chosen Bird. You are too late. Too small. Too soft."','speech');
   addLog('"I am frequently told that," says Mr. Ruffle Feathers, straightening his feathers.','ruffle');
   showDlg(NPCS.keeper,"A small, nervous bird who arrived in a shuttle called the Coop 69? The Hollow Star will consume you and everything you love. Surrender.",[
-    {text:'Fight the Void Keeper',fn:()=>fightKeeper(),cls:'danger'},
-    {text:'Use the Echo Orb (if you have it)',fn:()=>useOrbOnKeeper()},
-    {text:'Invoke the Prophecy — Speak the Final Words',fn:()=>invokeProph()},
+    {text:'⚔ Fight the Void Keeper',fn:()=>fightKeeper(),cls:'danger'},
+    {text:'📖 Invoke the Prophecy — Speak with It',fn:()=>invokeProph()},
   ]);
 }
 function fightKeeper(){
@@ -4910,8 +4964,12 @@ function invokeProph(){
     if(outcome==='crit'||outcome==='success'){
       addLog('The words leave your beak before you think them. The Keeper shudders as if struck.','magic');
       addLog('"You... know the Rite."','speech');
-      G.flags.keeperDefeated=true;G.flags.usedProphWords=true;addScore(90);finalChoice();
-    } else fightKeeper();
+      addLog('And in the space the words open, the Star shows you the truth: the Echo Orb is memory itself — return it to the Star, and the experiment closes for good.','magic');
+      G.flags.keeperDefeated=true;G.flags.usedProphWords=true;G.flags.sealInformed=true;addScore(90);finalChoice();
+    } else {
+      addLog('The Rite slips away half-spoken. The Keeper recovers, wholly unimpressed. You will have to do this the hard way.','bad');
+      fightKeeper();
+    }
   });
 }
 function finalChoice(){
@@ -4919,15 +4977,32 @@ function finalChoice(){
   addLog('The Hollow Star pulses before you. The Keeper is gone. Silence.','narrate');
   addLog('The Prophecy said: offer your choice. Not your life — your will. Your decision to stay.','narrate');
   addLog('Mr. Ruffle Feathers looks at the Hollow Star for a long, quiet moment.','narrate');
+  const opts=[];
+  if(hasItem('orb')){
+    if(G.flags.sealInformed)
+      opts.push({label:'🔮 Seal It with the Echo Orb',fn:()=>{closeModal();sealWithOrb(true)}});
+    else
+      opts.push({label:'🔮 Use the Echo Orb',fn:()=>{closeModal();sealWithOrb(false)}});
+  }
+  opts.push({label:'🚪 Seal It — Shut the Hatch',fn:()=>{closeModal();endingHatchOnly()}});
+  opts.push({label:'🚷 Refuse. Walk Away.',fn:()=>{closeModal();endingRefusal()}});
   showModal('✨','The Hollow Star Waits',
     'The Prophecy requires your choice. Not sacrifice — presence. Willingness. This is the seal.',
-    [{label:'Step Forward — Seal It',fn:()=>{closeModal();endingHero()}},{label:'Demand to Understand First',fn:()=>{closeModal();endingScholar()}},{label:'Refuse. Walk Away.',fn:()=>{closeModal();endingRefusal()}}]
+    opts
   );
 }
 
 // ============================================================
 // ENDINGS
 // ============================================================
+function sealWithOrb(informed){
+  if(!informed){
+    addLog('You raise the Echo Orb. You have no idea what it does — only that it hums like it has been waiting. You use it. The Star remembers. And in remembering, it lets go. You realise, far too late to enjoy the suspense, that this was the answer the whole time.','magic');
+  }
+  if(hasItem('orb'))removeItem('orb');
+  G.flags.usedOrb=true;addScore(80);
+  endingHero();
+}
 function endingHero(){
   if(!G.flags.usedOrb){ endingHatchOnly(); return; }
   let title,badge,ending,epilogue;
