@@ -451,7 +451,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .lp-rounds{text-align:center;font-family:var(--mono);font-size:.62rem;color:var(--soft);margin-top:3px}
 /* Pattern */
 #pattern-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
-.pat-cell{background:var(--panel);border:2px solid var(--border);border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;transition:background .15s,border-color .15s;user-select:none}
+.pat-cell{background:var(--panel);border:2px solid var(--border);border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:1.9rem;color:var(--gold);text-shadow:0 0 8px rgba(201,168,76,.35);cursor:pointer;transition:background .15s,border-color .15s;user-select:none}
 .pat-cell:hover{border-color:var(--gold)}
 .pat-cell.lit{background:rgba(201,168,76,.2);border-color:var(--gold)}
 .pat-cell.correct{background:rgba(74,154,90,.2);border-color:var(--success)}
@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C15</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C16</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1164,6 +1164,7 @@ function initGame(){
     toiletCount:0,
     flapCount:0,
     cooCount:0,
+    visited:{nest:true},
     bonusPoints:0,
     titleName:'',
     _bananaSpawned:false,
@@ -1609,6 +1610,7 @@ const SFX = {
   },
   taunt: ()=>{ playTone(440,0.1,'square',0.2); playTone(330,0.2,'square',0.15,0.15); },
   heal: ()=>{ [523,659,784].forEach((f,i)=>playTone(f,0.15,'sine',0.2,i*0.1)); },
+  flap: ()=>{ playNoise(0.1,0.16); playTone(180,0.12,'sine',0.12,0.02); playNoise(0.1,0.13,0.2); playTone(160,0.12,'sine',0.1,0.22); },
   flush: ()=>{
     // Whoosh descending — toilet flush
     try{
@@ -2588,6 +2590,7 @@ function setActions(customActions){
 
   buttons.forEach(b=>{
     const lbl=(b.label||'').toLowerCase();
+    if(b.tab&&tabs[b.tab]){ tabs[b.tab].push(b); return; }
     if(talkKeywords.some(k=>lbl.includes(k))) tabs.talk.push(b);
     else if(goKeywords.some(k=>lbl.includes(k))) tabs.go.push(b);
     else if(lookKeywords.some(k=>lbl.includes(k))) tabs.look.push(b);
@@ -2597,6 +2600,20 @@ function setActions(customActions){
   // If tabs are empty, put everything in act
   if(!tabs.talk.length&&!tabs.go.length&&!tabs.look.length){
     tabs.act=buttons;
+  }
+
+  // Quick-travel: jump straight to any visited room in the same zone (no more Market-hopping)
+  const ZONE={nest:'station',facilities:'station',antechamber:'station',market:'station',dovecote:'station',corridors:'station',docking:'station',basement:'station',library:'station',coop69:'void',hollow_star:'void'};
+  const SHORT={nest:'Nest',facilities:'Facilities',antechamber:'Antechamber',market:'Market',dovecote:'Dovecote',corridors:'Corridors',docking:'Docking',basement:'Basement',library:'Library',coop69:'Coop 69',hollow_star:'Hollow Star'};
+  if(G.loc && G.visited){
+    const curZone=ZONE[G.loc.id]||'station';
+    Object.keys(G.visited).forEach(locId=>{
+      if(locId===G.loc.id || !LOCATIONS[locId]) return;
+      if((ZONE[locId]||'station')!==curZone) return;
+      const key=SHORT[locId]||LOCATIONS[locId].name;
+      if(tabs.go.some(b=>(b.label||'').includes(key))) return; // room already offers this exit
+      tabs.go.push({label:'→ '+LOCATIONS[locId].name, fn:()=>travelTo(locId)});
+    });
   }
 
   // People present = real talk options (NPCs) exist before we add the universal coo
@@ -2633,6 +2650,7 @@ function travelTo(locId){
 function doTravel(locId){
   if(!LOCATIONS[locId]){addLog('That place doesn\'t exist.','system');return}
   G.loc=LOCATIONS[locId];
+  G.visited=G.visited||{}; G.visited[locId]=true;
   _cooCount=0;
   // Autosave on travel
   try{localStorage.setItem('mrf_save', JSON.stringify(G))}catch(e){}
@@ -2685,94 +2703,66 @@ function runLockpick(difficulty,onSuccess,onFail){
 }
 
 function runPattern(onSuccess,onFail){
-  const SYMS=['🌑','⭐','🔮','🪶','☄️','💀','✨','🌀','⚔'];
-  const seqLen=3;
-  const answer=Array.from({length:seqLen},()=>Math.floor(Math.random()*9));
-  let playerSeq=[],canClick=false;
-
+  // Inscribe the Prophecy — read the seal's older tongue, then speak it back.
+  const LEGEND=[
+    {g:'𐤀',w:'Bird'},
+    {g:'𐤁',w:'Star'},
+    {g:'𐤂',w:'Choice'},
+    {g:'𐤄',w:'Void'},
+    {g:'𐤔',w:'Seal'},
+    {g:'𐤓',w:'Feather'},
+  ];
+  const ANSWER=['Bird','Star','Choice'];
+  const answerGlyphs=ANSWER.map(w=>LEGEND.find(l=>l.w===w).g);
+  let step=0, canTap=false;
   showMG(`
-    <div class="mg-title">📐 The Dovecote Seal</div>
-    <div class="mg-inst">Watch the sequence, then tap the symbols in the same order.</div>
-    <div id="pattern-grid"></div>
-    <div class="pat-status" id="pat-status">Watch carefully...</div>
+    <div class="mg-title">𐤀 The Dovecote Seal</div>
+    <div class="mg-inst" id="seal-inst">The seal speaks an older tongue. Study it while it lets you.</div>
+    <div id="seal-legend"></div>
+    <div id="pattern-grid" style="display:none"></div>
+    <div class="pat-status" id="seal-status"></div>
   `,null);
-
-  // Build grid (non-interactive initially)
-  function buildGrid(interactive){
-    const g=document.getElementById('pattern-grid');if(!g)return;
-    g.innerHTML='';
-    SYMS.forEach((sym,i)=>{
+  const leg=document.getElementById('seal-legend');
+  if(leg)leg.innerHTML=LEGEND.map(l=>`<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:5px 0;font-family:var(--mono);font-size:.82rem"><span style="font-size:1.7rem;color:var(--gold)">${l.g}</span><span style="color:var(--soft)">=</span><span style="color:var(--text);letter-spacing:.05em">${l.w}</span></div>`).join('');
+  function buildGrid(){
+    const grid=document.getElementById('pattern-grid');if(!grid)return;
+    grid.style.display='grid';
+    const shuffled=LEGEND.map(l=>l.g).slice().sort(()=>Math.random()-0.5);
+    grid.innerHTML='';
+    shuffled.forEach(g=>{
       const cell=document.createElement('div');
-      cell.className='pat-cell';cell.textContent=sym;cell.dataset.idx=i;
-      if(interactive)cell.onclick=()=>playerClick(i);
-      g.appendChild(cell);
+      cell.className='pat-cell';cell.textContent=g;
+      cell.onclick=()=>tapGlyph(g,cell);
+      grid.appendChild(cell);
     });
   }
-
-  function flashCell(idx,on){
-    const cells=document.getElementById('pattern-grid');if(!cells)return;
-    const cell=cells.querySelectorAll('.pat-cell')[idx];
-    if(cell){cell.classList.toggle('lit',on)}
-  }
-
-  // Play the sequence with flashes
-  function playSequence(step){
-    if(step>=answer.length){
-      // Sequence done, let player input
-      setTimeout(()=>{
-        const st=document.getElementById('pat-status');
-        if(st)st.textContent='Your turn — tap in order!';
-        canClick=true;
-      },400);
-      return;
-    }
-    setTimeout(()=>{
-      flashCell(answer[step],true);
-      setTimeout(()=>{
-        flashCell(answer[step],false);
-        playSequence(step+1);
-      },600);
-    },step===0?500:200);
-  }
-
-  buildGrid(false);
-  setTimeout(()=>{
-    playSequence(0);
-    // Rebuild as interactive after sequence plays
-    setTimeout(()=>buildGrid(true), answer.length*800+600);
-  },400);
-
-  function playerClick(i){
-    if(!canClick)return;
-    playerSeq.push(i);
-    flashCell(i,true);
-    setTimeout(()=>flashCell(i,false),300);
-
-    const pos=playerSeq.length-1;
-    if(playerSeq[pos]!==answer[pos]){
-      // Wrong — show correct and fail
-      canClick=false;
-      const cells=document.getElementById('pattern-grid');
-      if(cells){
-        cells.querySelectorAll('.pat-cell').forEach((c,k)=>{
-          if(answer.includes(k))c.classList.add('correct');
-        });
-        cells.querySelectorAll('.pat-cell')[i].classList.remove('correct');
-        cells.querySelectorAll('.pat-cell')[i].classList.add('wrong');
+  function tapGlyph(g,cell){
+    if(!canTap)return;
+    if(g===answerGlyphs[step]){
+      cell.classList.add('correct');step++;
+      if(step>=answerGlyphs.length){
+        canTap=false;
+        const st=document.getElementById('seal-status');if(st){st.style.color='var(--success)';st.textContent='✓ The seal accepts your hand.';}
+        addLog('"I just read a dead language," says Mr. Ruffle Feathers. "Mother would be appalled, and — briefly — proud."','ruffle');
+        setTimeout(()=>{closeMG();onSuccess()},1000);
       }
-      const st=document.getElementById('pat-status');if(st){st.style.color='var(--danger)';st.textContent='✗ Wrong sequence!'}
-      setTimeout(()=>{closeMG();onFail()},900);
-      return;
-    }
-
-    if(playerSeq.length===answer.length){
-      canClick=false;
-      const cells=document.getElementById('pattern-grid');
-      if(cells)cells.querySelectorAll('.pat-cell').forEach((c,k)=>{if(answer.includes(k))c.classList.add('correct')});
-      const st=document.getElementById('pat-status');if(st){st.style.color='var(--success)';st.textContent='✓ Correct!'}
-      setTimeout(()=>{closeMG();onSuccess()},800);
+    } else {
+      canTap=false;cell.classList.add('wrong');step=0;
+      const st=document.getElementById('seal-status');if(st){st.style.color='var(--danger)';st.textContent='The glyphs rearrange themselves, faintly disappointed in you.';}
+      setTimeout(()=>{
+        if(st){st.style.color='var(--soft)';st.textContent='Try again — inscribe: Bird · Star · Choice.';}
+        buildGrid();canTap=true;
+      },1200);
     }
   }
+  setTimeout(()=>{
+    if(leg){leg.style.transition='opacity .6s';leg.style.opacity='0';}
+    setTimeout(()=>{
+      if(leg)leg.style.display='none';
+      const inst=document.getElementById('seal-inst');if(inst)inst.textContent='Now speak it back. Inscribe: Bird · Star · Choice.';
+      buildGrid();canTap=true;
+    },650);
+  },4200);
 }
 
 function runTiming(rounds,onSuccess,onFail){
@@ -3075,6 +3065,7 @@ function universalActions(){
 
 function flapWings(){
   G.flapCount=(G.flapCount||0)+1;
+  SFX.flap&&SFX.flap();
   if(!hasItem('feather')){
     addLog('Mr. Ruffle Feathers flaps his wings vigorously. A single feather drifts to the floor — which he then picks up out of principle.','narrate');
     giveItem('feather');
@@ -3576,7 +3567,7 @@ const LOCATIONS = {
       const btns=[
         {label:'📚 Speak to Archivist Pelum',fn:()=>meetPelum()},
         {label:'📖 Browse the Stacks',fn:()=>browseLibrary()},
-        {label:'📜 Read Library Volumes',fn:()=>showLibraryBooks()},
+        {label:'📜 Read Library Volumes',tab:'act',fn:()=>showLibraryBooks()},
         {label:'← Return to Market',fn:()=>travelTo('market')},
       ];
       return {context:'Ancient knowledge hums in the walls.',buttons:btns};
@@ -4085,7 +4076,7 @@ function pelumCharm(){
 // ============================================================
 function dovecoteSeal(){
   addLog('You approach the altar. The Marked Feather flares as the seal recognises it.','narrate');
-  addLog('Three runes must be matched in sequence.','narrate');
+  addLog('Its face bears an older script. Read it, then answer in kind.','narrate');
   runPattern(
     ()=>{G.flags.dovecoteSeal=true;addLog('The seal accepts the pattern. The altar glows gold.','good');addLog('The lectern\'s book opens of its own accord.','narrate');addScore(50);setActions()},
     ()=>{addLog('The pattern rejects. The altar dims. -2 HP from the backlash.','bad');loseHp(2);setActions()}
