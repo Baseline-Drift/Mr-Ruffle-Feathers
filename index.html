@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C11</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C12</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1584,6 +1584,10 @@ const SFX = {
 // ============================================================
 let _victoryCallback=null;
 let _victoryCount=0;
+function restoreNormalHUD(){
+  const hud=document.getElementById('mob-hud'); if(hud) hud.style.display='';
+  const gear=document.getElementById('settings-gear'); if(gear) gear.style.display='flex';
+}
 function showVictoryScreen(callback){
   _victoryCallback=callback;
   SFX.victory&&SFX.victory();
