@@ -321,7 +321,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .log-entry{margin-bottom:8px}
 .log-entry.narrate{color:var(--text)}
 .log-entry.speech{color:#b8d4c8;font-style:italic}
-.log-entry.speech::before{content:'" '}.log-entry.speech::after{content:' "'}
+/* speech quotes come from the strings themselves */
 .log-entry.ruffle{color:var(--gold);font-style:italic}
 .log-entry.ruffle::before{content:'🐦 '}
 .log-entry.good{color:var(--success)}
@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C10</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C11</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -3030,7 +3030,6 @@ function cooPointlessly(){
   if(_peopleHere){
     if(_cooCount<=2){
       pool=[
-        'Mr. Ruffle Feathers coos. The locals carry on exactly as before, with the practised ease of people ignoring a pigeon.',
         'He coos. Nobody looks up. In fairness, the correct response.',
         'A coo rings out. It is received with the warm indifference usually reserved for background noise.',
         'He coos politely. The room has collectively, and without discussion, decided not to engage.',
@@ -3790,7 +3789,7 @@ function meetVexis(){
   ]);
 }
 function vexis2(){
-  showDlg(NPCS.vexis,"A wound in reality. A star that died and left its hunger behind. The Wraiths have been feeding it. You — your specific plumage, your bloodline — are the only being whose essence can seal it.",[
+  showDlg(NPCS.vexis,"Not a wound — a hunger. The Magical Space Magnet, the engine of the Great Experiment, has been folding in on itself since the wipeout: a star half-born and starving. It does not burn. It takes — thought first, then memory, then all the rest. The Wraiths are what it made of humanity, and the husks drift back to feed it still. You — your specific plumage, your bloodline — are the only being whose essence can seal it before it finishes forming.",[
     {text:'"My plumage. Of course it\'s my plumage."',fn:()=>vexisTask()},
     {text:'Ask about the Wraiths',fn:()=>vexis3()},
   ]);
@@ -3956,7 +3955,7 @@ function pelumWraith(){
   setTimeout(()=>meetPelum(),600);
 }
 function pelumFail(){
-  addLog('"If you fail? The Expanse destabilises and everything within twelve light years gradually ceases to exist. The process takes about three days, so there is time to say goodbye to things."','speech');
+  addLog('"If you fail? It keeps forming, and it keeps eating. It reaches out to the nearest minds and takes them as it took humanity — thought first, then memory, then all the rest — and it spreads from there. Slowly. There is time to say goodbye to things. Not a great deal of time, but some."','speech');
   addLog('"Though I wouldn\'t recommend it."','speech');
   addLog('"No pressure," Mr. Ruffle Feathers says flatly.','ruffle');
   setTimeout(()=>meetPelum(),800);
@@ -3995,9 +3994,9 @@ function dovecoteSeal(){
 function readLivingBook(){
   G.flags.dovecoteDone=true;
   addLog('The book tells the full Prophecy plainly, as if tired of being misunderstood.','narrate');
-  addLog('"The Chosen Bird shall stand at the threshold of the Void. They shall offer not their life, but their choice. To seal the Hollow Star costs nothing but courage."','magic');
-  addLog('"That\'s considerably less dramatic than I expected," Mr. Ruffle Feathers admits.','ruffle');
-  addLog('The Echo Orb appears on the altar, offered freely.','narrate');
+  addLog('"The Chosen Bird shall stand at the threshold of the Void. They shall offer not their life, but their choice. Yet courage alone cannot close a hunger — to seal the Hollow Star, the Chosen must return to it the memory it devoured."','magic');
+  addLog('"Memory," Mr. Ruffle Feathers repeats. "I had rather hoped for the courage option. Courage, at least, I had budgeted for."','ruffle');
+  addLog('The Echo Orb appears on the altar, offered freely. It pulses with stored memory — which, he begins to suspect, is rather the point.','narrate');
   addScore(60);G.titleName='Chosen Bird';updateHUD();setActions();
 }
 
@@ -4506,6 +4505,7 @@ function showSpaceCombat(enemy, onWin, onLose){
   let enemyHp=enemy.hp, enemyShield=enemy.shield||0;
   let round=1, defending=false, mainUsed=false, bonusUsed=false;
   let sc_resolved=false;
+  let cannonHinted=false;
 
   function scLog(msg){
     if(!log)return;
@@ -4560,9 +4560,11 @@ function showSpaceCombat(enemy, onWin, onLose){
     const rightWrap=document.createElement('div');
     rightWrap.innerHTML=`<div style="font-family:var(--mono);font-size:.55rem;color:${bonusUsed?'var(--success)':'var(--soft)'};margin-bottom:3px;letter-spacing:.08em">BONUS${bonusUsed?' ✓':''}</div>`;
     const rightCol=document.createElement('div');rightCol.style.cssText='display:flex;flex-direction:column;gap:5px';
+    const lowPod = podHp <= podMaxHp*0.35;
+    const canCannon = lowPod && shipEnergy>=4 && !bonusUsed;
     [
-      {l:'💥 Mega Cannon',a:'cannon',locked:bonusUsed||shipEnergy<4},
       {l:'🪶 Feather Ray',a:'fray',locked:bonusUsed||shipEnergy<2},
+      {l:'💥 Mega Cannon',a:'cannon',locked:bonusUsed||shipEnergy<4||!lowPod},
       {l:'⚡ Recharge',a:'recharge',locked:bonusUsed},
     ].forEach(b=>{
       const btn=document.createElement('button');btn.className='act-btn magic';
@@ -4571,6 +4573,7 @@ function showSpaceCombat(enemy, onWin, onLose){
     });
     rightWrap.appendChild(rightCol);
     actions.appendChild(leftWrap);actions.appendChild(rightWrap);
+    if(canCannon && !cannonHinted){cannonHinted=true; scLog('💥 Hull critical — Mega Cannon comes online!');}
   }
 
   let _enemyTurnTimer=null;
