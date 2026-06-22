@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C12</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C13</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1669,8 +1669,12 @@ const ITEMS = {
 };
 
 function giveItem(id){
-  const slot=G.inv.indexOf(null);
-  if(slot===-1){addLog('Your pack is full.','system');return false}
+  const CRITICAL=['scroll','ink','marked','hatchkey','orb','starchart','feather'];
+  let slot=G.inv.indexOf(null);
+  if(slot===-1){
+    if(CRITICAL.includes(id)){slot=G.inv.length;G.inv.push(null);}
+    else {addLog('Your pack is full.','system');return false}
+  }
   G.inv[slot]={...ITEMS[id]};
   if(id==='lighter') G.inv[slot].desc=`${G.lighterFuel} use${G.lighterFuel!==1?'s':''} remaining. "I do not endorse this."`;
   updateHUD();addLog(`You pick up: ${ITEMS[id].icon} ${ITEMS[id].name}`,'system');return true;
@@ -2409,6 +2413,12 @@ function calcMirrorCost(stats){return Object.values(stats).reduce((sum,v)=>sum+S
 function calcMirrorPool(stats){return MIRROR_POOL-calcMirrorCost(stats)}
 
 function openMirror(){
+  const loc=G.loc?G.loc.id:'nest';
+  const coopOnce = loc==='coop69' && !G.flags.coopMirrorUsed;
+  if(loc!=='nest' && !coopOnce){
+    addLog('There is no mirror here. The one in The Nest is the only one that shows you true.','system');
+    return;
+  }
   mirrorStats={pluck:G.pluck,wit:G.wit,charm:G.charm,luck:G.luck};
   renderMirror();
   document.getElementById('mirror-overlay').classList.add('active');
@@ -2449,7 +2459,7 @@ function confirmMirror(){
   G.wit=Math.min(6, mirrorStats.wit+(G.bonuses.wit||0));
   G.charm=Math.min(6, mirrorStats.charm+(G.bonuses.charm||0));
   G.luck=Math.min(6, mirrorStats.luck+(G.bonuses.luck||0));
-  G.mirrorUsed=true;closeMirror();updateHUD();
+  G.mirrorUsed=true;if(G.loc&&G.loc.id==='coop69')G.flags.coopMirrorUsed=true;closeMirror();updateHUD();
   addLog('You step back from the mirror. Something about you has shifted.','magic');
   addLog(`You are now: ${buildFullTitle()}`,'magic');
   setActions();
@@ -2473,7 +2483,7 @@ function switchTab(tab){
 function renderBagTab(){
   const el=document.getElementById('tab-pack');
   const items=G.inv.filter(Boolean);
-  el.innerHTML=`<div class="pack-gold">⚜ Gold: ${G.gold} &nbsp;·&nbsp; ${items.length}/8 slots used</div>`;
+  el.innerHTML=`<div class="pack-gold">⚜ Gold: ${G.gold} &nbsp;·&nbsp; ${items.length}/${G.inv.length} slots used</div>`;
   if(items.length===0){el.innerHTML+=`<div class="pack-empty">"I am travelling light. By necessity."</div>`;return}
   const grid=document.createElement('div');grid.className='pack-grid';
   items.forEach(item=>{
@@ -2579,6 +2589,7 @@ function doTravel(locId){
   const log=document.getElementById('text-log');
   if(log){log.scrollTop=0;log.innerHTML='';}
   drawArt(G.loc.artKey||locId);
+  const ab=document.getElementById('art-badge'); if(ab) ab.textContent=G.loc.name;
   const h=document.createElement('div');h.className='log-loc';h.textContent=G.loc.name;log.appendChild(h);
   G.loc.onEnter();
   setActions();
@@ -3077,7 +3088,7 @@ function lookAround(){
             addLog('Wait — behind the wardrobe. A bum bag. Dusty. Been there for years apparently.','good');
             addLog('"How long has that been there?" Mr. Ruffle Feathers asks.','ruffle');
             addLog('No one answers. The bum bag has always been there.','narrate');
-            G.inv=Array(12).fill(null).map((v,i)=>G.inv[i]||null);
+            G.inv=Array(Math.max(12,G.inv.length)).fill(null).map((v,i)=>G.inv[i]||null);
             addLog('Inventory expanded to 12 slots!','magic');
             SFX.levelup&&SFX.levelup();updateHUD();setActions();
           }
@@ -3423,6 +3434,7 @@ const LOCATIONS = {
         if(hasItem('banana'))btns.push({label:'🍌 Throw the Banana',fn:()=>useItem(ITEMS.banana),cls:'magic'});
       }
       if(G.flags.captainDone&&!G.flags.hatchOpen){
+        if(!hasItem('hatchkey'))giveItem('hatchkey');
         if(hasItem('hatchkey'))btns.push({label:'🗝 Use the Containment Key',fn:()=>openHatch()});
         if(hasItem('marked'))btns.push({label:'🪶 Use the Marked Feather',fn:()=>useItem(ITEMS.marked)});
       }
