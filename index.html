@@ -594,7 +594,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C8</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C10</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -2507,6 +2507,7 @@ function renderBirdTab(){
 // ============================================================
 // ACTIONS & TRAVEL
 // ============================================================
+let _cooCount=0, _peopleHere=false;
 function setActions(customActions){
   const acts=customActions||(G.loc?G.loc.actions():{context:'What do you do?',buttons:[]});
   // Always append universal actions (Look Around, Set Fire) unless explicitly suppressed
@@ -2532,6 +2533,11 @@ function setActions(customActions){
   if(!tabs.talk.length&&!tabs.go.length&&!tabs.look.length){
     tabs.act=buttons;
   }
+
+  // People present = real talk options (NPCs) exist before we add the universal coo
+  _peopleHere = tabs.talk.length>0;
+  // Universal pigeon coo — always available in Talk so the tab is never empty
+  tabs.talk.push({label:'🕊 Coo Pointlessly', fn:()=>cooPointlessly()});
 
   _tabActions=tabs;
   updateTabBadges();
@@ -2562,6 +2568,7 @@ function travelTo(locId){
 function doTravel(locId){
   if(!LOCATIONS[locId]){addLog('That place doesn\'t exist.','system');return}
   G.loc=LOCATIONS[locId];
+  _cooCount=0;
   // Autosave on travel
   try{localStorage.setItem('mrf_save', JSON.stringify(G))}catch(e){}
   // Scroll log to top for new location
@@ -3014,6 +3021,41 @@ function flapWings(){
     'He flaps. A nearby dust bunny relocates two centimetres to the left. Mr. Ruffle Feathers considers this a victory.',
   ];
   addLog(lines[Math.floor(Math.random()*lines.length)], 'narrate');
+}
+
+function cooPointlessly(){
+  pigeonCoo();
+  _cooCount++;
+  let pool;
+  if(_peopleHere){
+    if(_cooCount<=2){
+      pool=[
+        'Mr. Ruffle Feathers coos. The locals carry on exactly as before, with the practised ease of people ignoring a pigeon.',
+        'He coos. Nobody looks up. In fairness, the correct response.',
+        'A coo rings out. It is received with the warm indifference usually reserved for background noise.',
+        'He coos politely. The room has collectively, and without discussion, decided not to engage.',
+      ];
+    } else {
+      pool=[
+        'He coos again. Someone exhales through their nose in a manner that is technically still polite.',
+        'Another coo. A nearby local mutters, "Is he going to keep doing that?"',
+        'He coos once more. The mood in the room curdles, slightly.',
+        '"Please stop," someone says — to no one in particular, and possibly to him.',
+        'He coos. The patience of the room, never abundant, visibly thins.',
+      ];
+    }
+  } else {
+    pool=[
+      'Mr. Ruffle Feathers coos. The sound travels exactly nowhere and is acknowledged by no one.',
+      'He produces a deep, resonant coo. The universe, as a matter of policy, does not respond to coos.',
+      'Coo. A magnificent coo. Wasted, utterly, on an empty room.',
+      'He coos with great conviction. Conviction, it turns out, is inaudible to anyone who matters.',
+      'He coos. The kettle whistles back in D-minor — not listening either, but at least it replied.',
+      'Mr. Ruffle Feathers emits the ancestral coo of his line. Ten thousand years of heritage. Nobody claps.',
+      'He coos into the void. The void, true to form, keeps the change.',
+    ];
+  }
+  addLog(pool[Math.floor(Math.random()*pool.length)], 'narrate');
 }
 
 function lookAround(){
@@ -4774,8 +4816,9 @@ function finalChoice(){
 // ENDINGS
 // ============================================================
 function endingHero(){
+  if(!G.flags.usedOrb){ endingHatchOnly(); return; }
   let title,badge,ending,epilogue;
-  if(G.flags.captainRedeemed&&G.flags.usedOrb&&G.score>=400){
+  if(G.flags.captainRedeemed&&G.score>=400){
     title='The Magnificent Chosen';badge='👑 Legend of the Expanse';
     ending='Mr. Ruffle Feathers steps forward. The Star recognises him the way a wound recognises a hand that wants to heal it. The seal takes — and holds. The Wraiths dissolve, the Captain finally at rest.';
     epilogue='He flies the Coop 69 home. Pelum writes fourteen more volumes. Marta names a stall after him. He drinks his Space Tea and tries not to think about the thousand years until next time.';
@@ -4794,10 +4837,62 @@ function endingHero(){
   }
   showEnding(title,badge,ending,epilogue);
 }
+function endingHatchOnly(){
+  addLog('Mr. Ruffle Feathers shuts the Containment Hatch. It is, when all is said and done, a door. He has read enough to know that doors do not historically hold back gods. He closes it anyway — because it is what he has, and because someone ought to.','narrate');
+  addLog('The Containment Key slips from his grip and clatters into a floor vent. It is right there. He can see it — glinting, perhaps a wing\'s length down. Retrieving it would require effort. He decides, as he so often does, that it is a problem for a future bird.','ruffle');
+  const ov=document.getElementById('dice-overlay');
+  document.getElementById('dice-challenge').textContent='LUCK Check — Will the Seal Hold?';
+  document.getElementById('dice-name').textContent='A Door Against a God';
+  document.getElementById('dice-face').textContent='🎲';
+  document.getElementById('dice-num').textContent='—';
+  document.getElementById('dice-mod').textContent='';
+  document.getElementById('dice-result').textContent='Rolling...';
+  document.getElementById('dice-result').className='dice-result';
+  document.getElementById('dice-continue').style.display='none';
+  ov.classList.add('active');
+  SFX.dice&&SFX.dice();
+  let ticks=0;
+  const iv=setInterval(()=>{
+    document.getElementById('dice-face').textContent=DFACES[Math.floor(Math.random()*6)];
+    if(++ticks>12){
+      clearInterval(iv);
+      const roll=Math.floor(Math.random()*20)+1;
+      const total=roll+G.luck;
+      document.getElementById('dice-num').textContent=total;
+      document.getElementById('dice-mod').textContent=`d20(${roll}) + Luck(${G.luck}) = ${total}`;
+      document.getElementById('dice-face').textContent=roll===20?'✨':roll===1?'💀':DFACES[Math.min(5,Math.floor(roll/3.5))];
+      let fate,epilogue,rc,rt,etitle,ebadge;
+      if(total>=11){
+        rc='success';rt='✓ The hatch holds — for now.';
+        etitle='The Bird Who Shut the Door';ebadge='🚪 A Seal of Sorts';
+        fate='The Containment Hatch holds. Behind it, the Hollow Star keeps forming — patient, hungry, sealed away by a door and a held breath. It is not finished. But it is, for now, contained.';
+        epilogue='Mr. Ruffle Feathers flies the Coop 69 home. The Containment Key still glints in the vent where he left it, a wing\'s length down, should anyone ever feel like making the effort. He does not mention this to anyone. The tea is warm. That is enough — for now.';
+      } else {
+        rc='fail';rt='✗ The experiment resets.';
+        etitle='The Last Clever Bird';ebadge='🕊 Alone, Regardless';
+        fate='The hatch holds the Star — but not the experiment. Without the Echo Orb, the engine behind the door simply resets. Across the Expanse the borrowed light goes out. Minds dim. The clever rats forget they were ever clever. Mrs Fluffinator is, once more, only a cat. And in the corridors the wraiths draw breath, remember their names, and are human again.';
+        epilogue='Mr. Ruffle Feathers is the exception. He always was. He stands in a station full of restored humans who have never heard of him, among animals who can no longer be ignored on purpose — because no one is left who could. He coos, once, into the quiet. Nobody listens. Nobody ever will again. "...Right," he says, to no one able to answer. "Of course."';
+      }
+      document.getElementById('dice-result').textContent=rt;
+      document.getElementById('dice-result').className='dice-result '+rc;
+      diceCallback=()=>{
+        ov.classList.remove('active');
+        showEnding(etitle,ebadge,fate,epilogue);
+      };
+      document.getElementById('dice-continue').style.display='inline-block';
+    }
+  },80);
+}
 function endingScholar(){
-  showEnding('The Thoughtful Chosen','📖 Seeker of Truth',
-    'You ask: why always a bird? The Hollow Star — impossibly — answers. In memory. You see the first Chosen Bird, ten thousand years ago, making the same choice. Freely. You understand. You step forward.',
-    '"It could have asked," Mr. Ruffle Feathers says afterward. "A letter would have been sufficient. I would have come anyway."'
+  let reveal;
+  if(G.flags.usedOrb){
+    reveal='You ask: why always a bird? The Hollow Star answers, in memory — the first Chosen Bird, ten thousand years ago, choosing freely. And you understand the rest, too: the Echo Orb you spent was the missing piece. This seal will not merely hold the Star. It will close the experiment. Quietly. Properly. For good.';
+  } else {
+    reveal='You ask: why always a bird? The Hollow Star answers, in memory. And in answering, it shows you what you do not have. The Echo Orb — memory itself — was the piece that closes the experiment. Without it you can only shut the hatch. A door. And a door does not stop an engine; it only postpones what the engine always meant to do.';
+  }
+  addLog(reveal,'magic');
+  showModal('📖','You Understand Now', reveal,
+    [{label:'Seal It',fn:()=>{closeModal();endingHero()}},{label:'Refuse. Walk Away.',fn:()=>{closeModal();endingRefusal()}}]
   );
 }
 function endingRefusal(){
@@ -4824,21 +4919,13 @@ function endingRefusal(){
       document.getElementById('dice-mod').textContent=`d20(${roll}) + Luck(${G.luck}) = ${total}`;
       document.getElementById('dice-face').textContent=roll===20?'✨':roll===1?'💀':DFACES[Math.min(5,Math.floor(roll/3.5))];
       let fate,epilogue,rc,rt;
-      if(roll===20||total>=18){
-        rc='crit';rt='⭐ The universe holds!';
-        fate='The Hollow Star dims on its own. Somehow. Against all reasonable expectation. The Expanse holds. Mr Ruffle Feathers had nothing to do with this and will never know.';
-        epilogue='"I\'ll deal with it when it does," says Mr. Ruffle Feathers, back in the Nest, drinking his tea. Something somewhere stabilises quietly. He does not notice.';
-      } else if(total>=13){
-        rc='success';rt='✓ Tense equilibrium.';
-        fate='The Hollow Star waits. Not dead, but patient. It has waited a thousand years. It can wait longer. The Expanse holds, for now, in tense equilibrium.';
-        epilogue='"I\'ll deal with it when it does," says Mr. Ruffle Feathers. He means it. And that is almost the same thing as a choice.';
-      } else if(total>=8){
-        rc='partial';rt='~ Something stirs.';
-        fate='The Hollow Star pulses once. Twice. Somewhere on the far edge of the Expanse, something stirs. It will be someone else\'s problem. Eventually. Probably.';
-        epilogue='"I\'ll deal with it when it does," says Mr. Ruffle Feathers. He will not be the one dealing with it. Another Ruffle Feathers will. They will be annoyed.';
+      if(total>=11){
+        rc='success';rt='✓ Stable — for now.';
+        fate='The Hollow Star waits. It has waited a thousand years; it can wait longer. Nothing wakes that was not already awake. The Expanse holds — for now.';
+        epilogue='"I\'ll deal with it when it does," says Mr. Ruffle Feathers, back in the Nest, drinking his tea. He will not be the one dealing with it. But the tea is warm, and for now that is the entire extent of his ambition.';
       } else {
-        rc='fail';rt='✗ The universe has a bad time.';
-        fate='The Hollow Star begins to expand. Slowly. Patiently. As if it has been waiting for exactly this. The wraith population increases. Keith is furious about this for unrelated reasons.';
+        rc='fail';rt='✗ It begins to spread.';
+        fate='The Hollow Star begins to expand — slowly, patiently, as if it had been waiting for precisely this. It reaches for the nearest minds and takes them the way it once took humanity: thought first, then memory, then all the rest. It will not stop. It was never going to stop. It only needed to be left alone.';
         epilogue='Somewhere, a Ms Ruffle Feathers receives an urgent delivery via the Avian Delivery Service. She sighs. She already knows what it is. "Of course," she says. "Of course it was him."';
       }
       document.getElementById('dice-result').textContent=rt;
