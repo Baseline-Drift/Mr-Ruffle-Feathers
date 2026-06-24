@@ -604,7 +604,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C18</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C20</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1763,8 +1763,9 @@ function useItem(item){
     drink_potion:()=>{gainHp(8);removeItem('potion');addLog('You drink the Healing Draught. +8 HP.','good')},
     use_orb:()=>{addLog('The Echo Orb replays the Dovecote memory — a vast bird of light, wings across galaxies.','magic');addLog('"That bird looks distressingly like me," Mr. Ruffle Feathers mutters.','ruffle');G.flags.orbUsed=true},
     read_grimoire:()=>{
-      earnBonus('pluck',1);removeItem('grimoire');
-      addLog('Ancient courage-magic seeps into your feathers. Pluck +1!','magic');G.flags.grimRead=true;setActions();
+      const b=Math.max(1,Math.min(3,G.flags.lastWraithN||1));
+      earnBonus('pluck',b);removeItem('grimoire');
+      addLog(`Ancient courage-magic seeps into your feathers. Pluck +${b}!`,'magic');G.flags.grimRead=true;setActions();
     },
     use_lighter:()=>useLighter(),
     flip_coin:()=>flipCoin(),
@@ -1908,9 +1909,11 @@ function useLighter(){
           addLog('The flame somehow cauterises a fuel leak that was quietly going to kill you later. The Coop 69 is now more airworthy than before.','magic');
           addLog('"I don\'t know what I expected but it was better than that," Mr. Ruffle Feathers says.','ruffle');
           gainHp(3);addScore(30);
+          if(!G.flags.podReinforced){G.flags.podReinforced=true;addLog('The Coop 69\'s hull is +5 sturdier for it.','good');}
         } else if(outcome==='success'||outcome==='partial'){
           addLog('A small scorch mark on the ceiling. Nothing explodes. Mr. Ruffle Feathers breathes out slowly.','system');
           loseHp(1);addLog('-1 HP from a small singeing.','bad');
+          if(!G.flags.podReinforced){G.flags.podReinforced=true;addLog('The scare sealed a hairline fracture. The Coop 69 is +5 sturdier.','good');}
         } else if(outcome==='fumble'){
           addLog('There is an explosion. Small, but definitive. Everything smells of burnt feathers.','bad');
           addLog('"I want this removed from the record," Mr. Ruffle Feathers says, from inside a small fire.','ruffle');
@@ -3567,10 +3570,12 @@ const DECKS=[
   {name:'Habitation Deck', rooms:['nest']},
   {name:'Commerce Deck', rooms:['market','library']},
   {name:'Sanctum Deck', rooms:['antechamber','dovecote']},
+  {name:'Docking Bay', rooms:['docking']},
 ];
 function roomDeck(id){return DECKS.find(d=>d.rooms.includes(id))||null;}
 function roomUnlocked(id){
   if(id==='library') return !!(G.flags.pelumDirected||G.flags.libraryVisited);
+  if(id==='docking') return !!(G.visited&&G.visited.docking);
   return true; // nest, market, antechamber, dovecote are always reachable
 }
 function openLift(){
@@ -4009,13 +4014,7 @@ function martaShop(){
     ? `Ruffle! Your silver tongue gets you a deal today — I've got ${[inkAvail?`🖋 Void Ink (${inkPrice}g)`:null,potAvail?`⚗️ Healing Draught (${potPrice}g)`:null].filter(Boolean).join(', ')}.`
     : `Ruffle! ${[inkAvail?`🖋 Void Ink (${inkPrice}g)`:null,potAvail?`⚗️ Healing Draught (${potPrice}g)`:null].filter(Boolean).join(', ') || "Stock's thin today."}`;
   showDlg(NPCS.marta, greeting, [
-    inkAvail&&G.gold>=inkPrice?{text:`Buy Void Ink (${inkPrice} gold)`,fn:()=>{G.flags.martaSoldInk=true;G.gold-=inkPrice;giveItem('ink');updateHUD();addLog('Marta hands over the Void Ink.','narrate');martaShop()}}:null,
-    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}g) — can't afford`,fn:()=>{}}:null,
-    potAvail&&G.gold>=potPrice?{text:`Buy Healing Draught (${potPrice} gold)`,fn:()=>{G.flags.martaSoldPotion=true;G.gold-=potPrice;giveItem('potion');updateHUD();addLog('Marta tucks a potion into your wing.','narrate');martaShop()}}:null,
-    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}g) — can't afford`,fn:()=>{}}:null,
-    hasItem('coin')?{text:'Show the Ancient Coin',fn:()=>martaCoin()}:null,
-    !hasItem('snack')&&!G.flags.martaSoldSnack?{text:`Buy Space Sardines (${angry?6:3} gold)`,fn:()=>{const p=angry?6:3;if(G.gold<p){addLog("Can't afford it.",'system');setTimeout(()=>martaShop(),600);return}G.flags.martaSoldSnack=true;G.gold-=p;giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
-    angry&&G.charm>=4?{text:'"I\'m sorry about the fire." (Charm check)',fn:()=>{
+    angry?{text:'"I\'m sorry about the fire." (Charm check)',fn:()=>{
       rollDice('Apologise to Marta','charm',12,(o)=>{
         if(o==='crit'||o==='success'){
           addLog('"..."','speech');
@@ -4028,6 +4027,12 @@ function martaShop(){
         setTimeout(()=>martaShop(),800);
       });
     }}:null,
+    inkAvail&&G.gold>=inkPrice?{text:`Buy Void Ink (${inkPrice} gold)`,fn:()=>{G.flags.martaSoldInk=true;G.gold-=inkPrice;giveItem('ink');updateHUD();addLog('Marta hands over the Void Ink.','narrate');martaShop()}}:null,
+    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}g) — can't afford`,fn:()=>{}}:null,
+    potAvail&&G.gold>=potPrice?{text:`Buy Healing Draught (${potPrice} gold)`,fn:()=>{G.flags.martaSoldPotion=true;G.gold-=potPrice;giveItem('potion');updateHUD();addLog('Marta tucks a potion into your wing.','narrate');martaShop()}}:null,
+    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}g) — can't afford`,fn:()=>{}}:null,
+    hasItem('coin')?{text:'Show the Ancient Coin',fn:()=>martaCoin()}:null,
+    !hasItem('snack')&&!G.flags.martaSoldSnack?{text:`Buy Space Sardines (${angry?6:3} gold)`,fn:()=>{const p=angry?6:3;if(G.gold<p){addLog("Can't afford it.",'system');setTimeout(()=>martaShop(),600);return}G.flags.martaSoldSnack=true;G.gold-=p;giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
     !G.flags.basementHinted?{text:'"What\'s happening on the station?"',fn:()=>martaGossip()}:null,
     G.flags.basementHinted?{text:'"Anything else going on?"',fn:()=>martaGossip()}:null,
     {text:'Leave',fn:()=>setActions()},
@@ -4153,7 +4158,7 @@ function startWraithFight(skipFusion){
   const HP={1:12,2:24,3:36};
   const enemy={name:NAME[n],icon:'👻',hp:HP[n],maxHp:HP[n],pluck:1+n};
   const begin=()=>startCombat(enemy,
-    ()=>{G.flags.wraith1Done=true;G.flags.wraith1Defeated=true;addLog(`${enemy.name} disperses with a sound like tearing paper.`,'good');addScore(40+(n-1)*30);setActions()},
+    ()=>{G.flags.wraith1Done=true;G.flags.wraith1Defeated=true;G.flags.lastWraithN=n;addLog(`${enemy.name} disperses with a sound like tearing paper.`,'good');addScore(40+(n-1)*30);setActions()},
     (r)=>{if(r==='fled'){setActions()}else deathScreen()}
   );
   if(n>1 && !skipFusion){
@@ -4665,7 +4670,7 @@ function showSpaceCombat(enemy, onWin, onLose){
   playCombatMusic&&playCombatMusic();
 
   // Space combat state
-  let podHp=20, podMaxHp=20;
+  let podMaxHp=20+(G.flags.podReinforced?5:0), podHp=podMaxHp;
   let shipEnergy=10, maxEnergy=10;
   let enemyHp=enemy.hp, enemyShield=enemy.shield||0;
   let round=1, defending=false, mainUsed=false, bonusUsed=false;
@@ -5126,7 +5131,20 @@ function endingRefusal(){
     }
   },80);
 }
+function tryBlubberRevive(){
+  if(!hasItem('snack')||!G.flags.blubberstiltskinFriend) return false;
+  removeItem('snack');
+  G.hp=Math.max(1,Math.ceil((G.maxHp||20)/2));updateHUD();
+  addLog('Darkness — then a vast, gentle warmth. Blubberstiltskin looms from nowhere, plucks the Space Sardines from your bag, and breathes light back into you.','magic');
+  addLog('"...We are even now," Mr. Ruffle Feathers says. Blubberstiltskin, who does not keep score, lets him believe it.','ruffle');
+  return true;
+}
 function deathScreen(){
+  if(tryBlubberRevive()){
+    const ov=document.getElementById('combat-overlay');
+    if(ov&&ov.classList.contains('active'))updateCombatHUD();
+    return;
+  }
   stopMusic();
   showModal('💀','Mr. Ruffle Feathers Has Perished',
     '"I did not survive fourteen asteroid fields, one singing void, and a prophecy to end like this." — Mr. Ruffle Feathers, last words',
