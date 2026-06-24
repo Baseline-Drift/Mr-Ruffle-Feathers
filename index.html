@@ -604,7 +604,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C20</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C21</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1111,7 +1111,7 @@ const STAT_INFO = {
   charm:{icon:'💬',label:'Charm',desc:'Persuasion and presence. Affects NPC dialogue, haggling, and talking your way out of trouble.'},
   luck:{icon:'🍀',label:'Luck',desc:'Fortune and chaos. Triggers passive rolls, coin flips, item finds and unexpected windfalls.'},
 };
-const MIRROR_POOL = 5;
+const MIRROR_POOL = 6;
 
 function calcTitleBase(stats){
   const {pluck,wit,charm,luck}=stats;
@@ -1120,6 +1120,7 @@ function calcTitleBase(stats){
   if(all2) return 'Ordinary Bird';
   const hasDump=[pluck,wit,charm,luck].some(v=>v===1);
   const prefix=hasDump?'Lopsided ':'';
+  const lookMax=Math.min(5,max);
   const dominant=max===pluck?'pluck':max===wit?'wit':max===charm?'charm':'luck';
   const titles={
     pluck:{3:'Reckless Bird',4:'Daring Bird',5:'Fearless Bird'},
@@ -1127,7 +1128,7 @@ function calcTitleBase(stats){
     charm:{3:'Agreeable Bird',4:'Diplomatic Bird',5:'Silver-Tongued Bird'},
     luck:{3:'Fortunate Bird',4:'Charmed Bird',5:'Bird of Dubious Providence'},
   };
-  return prefix+(titles[dominant][max]||'Ordinary Bird');
+  return prefix+(titles[dominant][lookMax]||'Ordinary Bird');
 }
 
 function calcPigeonAffix(){
@@ -1507,6 +1508,10 @@ function closeHistory(){document.getElementById('history-overlay').classList.rem
 // SOUND ENGINE (Web Audio API)
 // ============================================================
 let audioCtx = null;
+document.addEventListener('visibilitychange',()=>{
+  if(!audioCtx) return;
+  try{ if(document.hidden) audioCtx.suspend(); else audioCtx.resume(); }catch(e){}
+});
 function getAudio(){
   if(!audioCtx){
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
@@ -1805,18 +1810,23 @@ function useItem(item){
 }
 
 // Earn a stat bonus that stacks on top of mirror allocation
+function recalcDerived(){
+  // Pluck drives Max HP, Wit drives Max MP. +/-1 stat = +/-2.
+  const nHp=20+(G.pluck-2)*2, nMp=12+(G.wit-2)*2;
+  const dHp=nHp-G.maxHp, dMp=nMp-G.maxMp;
+  G.maxHp=nHp; G.maxMp=nMp;
+  if(dHp>0) G.hp+=dHp;   // raising the cap tops up current HP by the gain
+  if(dMp>0) G.mp+=dMp;
+  G.hp=Math.max(1,Math.min(G.hp,G.maxHp));
+  G.mp=Math.max(0,Math.min(G.mp,G.maxMp));
+  updateHUD();
+}
 function earnBonus(stat, amount){
+  // Locked quest bonus: stacks on top of the mirror allocation, breaks the soft cap.
   G.bonuses[stat]=(G.bonuses[stat]||0)+amount;
-  const newVal=G[stat]+amount;
-  if(newVal>6){
-    // Already at cap — convert to free mirror point
-    G.bonusPoints=(G.bonusPoints||0)+1;
-    addLog(`${stat.charAt(0).toUpperCase()+stat.slice(1)} is already at its peak. The energy has to go somewhere. +1 free mirror point!`,'magic');
-    updateHUD();
-  } else {
-    G[stat]=Math.min(6,newVal);
-    updateHUD();
-  }
+  G[stat]=(G[stat]||0)+amount;
+  if(stat==='pluck'||stat==='wit') recalcDerived();
+  updateHUD();
 }
 
 // ============================================================
@@ -1891,7 +1901,7 @@ function useLighter(){
         addLog('"Still works," Mr. Ruffle Feathers notes, filing this away.','ruffle');
       } else {
         addLog('You hold the lighter aloft. The Wraiths recoil from the flame — fire is antithetical to their existence.','good');
-        if(!G.flags.corridorsFired){G.flags.corridorsFired=true;addLog('The Patrol Wraith disperses without a fight. Pluck +1 from sheer confidence.','magic');G.pluck=Math.min(5,G.pluck+1);updateHUD();G.flags.wraith1Done=true;setActions()}
+        if(!G.flags.corridorsFired){G.flags.corridorsFired=true;addLog('The Patrol Wraith disperses without a fight. Pluck +1 from sheer confidence.','magic');earnBonus('pluck',1);G.flags.wraith1Done=true;setActions()}
         else addLog('They keep their distance. One trick.','system');
       }
     },
@@ -2279,8 +2289,7 @@ function setCombatBtns(){
     {l:'🛡 Defend',cls:'',a:'defend'},
     {l:'💬 Taunt',cls:'',a:'taunt'},
     {l:'🏃 Flee',cls:'danger',a:'flee'},
-    // End Turn only shows after main is used but bonus isn't
-    ...(mainDone&&!bonusDone?[{l:'⏭ End Turn',cls:'',a:'endturn'}]:[]),
+    {l:'⏭ End Turn',cls:'',a:'endturn'}, // persistent slot; enabled only after main, before bonus
   ];
 
   const poopLocked = !lowHp || G.mp<5;
@@ -2295,7 +2304,9 @@ function setCombatBtns(){
   leftWrap.innerHTML=`<div style="font-family:var(--mono);font-size:.55rem;color:${mainDone?'var(--success)':'var(--soft)'};margin-bottom:3px;letter-spacing:.08em">ACTION${mainDone?' ✓':''}</div>`;
   const leftCol=document.createElement('div');leftCol.style.cssText='display:flex;flex-direction:column;gap:5px';
   mainActions.forEach(b=>{
-    const btn=document.createElement('button');btn.className='act-btn '+(b.cls||'');btn.textContent=b.l;btn.disabled=mainDone;btn.onclick=()=>doCombat(b.a,'main');leftCol.appendChild(btn);
+    const btn=document.createElement('button');btn.className='act-btn '+(b.cls||'');btn.textContent=b.l;
+    btn.disabled = b.a==='endturn' ? (!mainDone||bonusDone) : mainDone;
+    btn.onclick=()=>doCombat(b.a,'main');leftCol.appendChild(btn);
   });
   leftWrap.appendChild(leftCol);
 
@@ -2344,11 +2355,13 @@ function doCombat(action,actionType){
       combatState.taunted=3;combatState.tauntMiss=true;
       addLog(`"${combatState.name} stares in disbelief."`, 'ruffle');
     } else if(total>=dc+4){
-      cLog(`Great success! ${combatState.name} flustered — -2 to rolls for 2 rounds.`);
-      combatState.taunted=2;combatState.tauntPenalty=2;
+      {const p=2+Math.max(0,Math.floor((G.charm-2)/2));
+      cLog(`Great success! ${combatState.name} flustered — -${p} to rolls for 2 rounds.`);
+      combatState.taunted=2;combatState.tauntPenalty=p;}
     } else if(total>=dc){
-      cLog(`Success! ${combatState.name} annoyed — -1 to rolls for 2 rounds.`);
-      combatState.taunted=2;combatState.tauntPenalty=1;
+      {const p=1+Math.max(0,Math.floor((G.charm-2)/2));
+      cLog(`Success! ${combatState.name} annoyed — -${p} to rolls for 2 rounds.`);
+      combatState.taunted=2;combatState.tauntPenalty=p;}
     } else {
       cLog(`${combatState.name} is unimpressed. Attacks harder next round.`);
       combatState.tauntFail=true;
@@ -2394,9 +2407,11 @@ function doCombat(action,actionType){
   const dc=(combatState.pluck+8)-(combatState.blinded?4:0);const hit=raw+mod>=dc||raw===20;
   cLog(`${action==='magic'?'✨ Ruffle Blast':'⚔ Strike'} — d20(${raw}) + ${action==='magic'?'Wit':'Pluck'}(${mod}) = ${raw+mod} vs DC ${dc}`);
   if(hit){SFX.hit();
-    const dmg=Math.max(1,(action==='magic'?5:3)+Math.floor(mod/2)+(raw===20?3:0));
+    let dmg=Math.max(1,(action==='magic'?5:3)+Math.floor(mod/2)+(raw===20?3:0));
+    const luckCrit=Math.random()<(0.05+G.luck*0.03);
+    if(luckCrit)dmg=Math.round(dmg*1.5);
     combatState.hp=Math.max(0,combatState.hp-dmg);
-    cLog(`${action==='magic'?'✨ Ruffle Blast':'⚔ Strike'} — ${dmg} damage!${raw===20?' CRITICAL!':''}`);updateCombatHUD();
+    cLog(`${action==='magic'?'✨ Ruffle Blast':'⚔ Strike'} — ${dmg} damage!${luckCrit?' 🍀 LUCKY CRIT! (×1.5)':raw===20?' CRITICAL!':''}`);updateCombatHUD();
     if(combatState.hp<=0){cLog(`${combatState.name} is defeated!`);setTimeout(()=>{document.getElementById('combat-overlay').classList.remove('active');const _g3=document.getElementById('settings-gear');if(_g3)_g3.style.display='flex';stopMusic();setTimeout(playExploreMusic,800);addLog(`${combatState.name} falls.`,'good');showVictoryScreen(()=>{if(combatState.onWin)combatState.onWin()})},1100);return}
   } else {SFX.miss();cLog(`${action==='magic'?'Ruffle Blast fizzles':'Strike misses'}.`);}
   checkEndOfPlayerTurn();
@@ -2485,7 +2500,9 @@ function openMirror(){
     addLog('There is no mirror here. The one in The Nest is the only one that shows you true.','system');
     return;
   }
-  mirrorStats={pluck:G.pluck,wit:G.wit,charm:G.charm,luck:G.luck};
+  const _b=G.bonuses||{};
+  const _strip=v=>Math.max(1,Math.min(5,v));
+  mirrorStats={pluck:_strip(G.pluck-(_b.pluck||0)),wit:_strip(G.wit-(_b.wit||0)),charm:_strip(G.charm-(_b.charm||0)),luck:_strip(G.luck-(_b.luck||0))};
   renderMirror();
   document.getElementById('mirror-overlay').classList.add('active');
 }
@@ -2494,10 +2511,12 @@ function closeMirror(){document.getElementById('mirror-overlay').classList.remov
 function renderMirror(){
   const pool=calcMirrorPool(mirrorStats);
   document.getElementById('mirror-pool-txt').textContent=`POINTS REMAINING: ${pool}`;
-  document.getElementById('mirror-preview').textContent=calcTitleBase(mirrorStats);
+  const _bb=G.bonuses||{};
+  const _tot={pluck:mirrorStats.pluck+(_bb.pluck||0),wit:mirrorStats.wit+(_bb.wit||0),charm:mirrorStats.charm+(_bb.charm||0),luck:mirrorStats.luck+(_bb.luck||0)};
+  document.getElementById('mirror-preview').textContent=calcTitleBase(_tot);
   const container=document.getElementById('mirror-stats');container.innerHTML='';
   ['pluck','wit','charm','luck'].forEach(stat=>{
-    const info=STAT_INFO[stat];const val=mirrorStats[stat];
+    const info=STAT_INFO[stat];const val=mirrorStats[stat];const bonus=(G.bonuses&&G.bonuses[stat])||0;
     const canInc=val<5&&pool>=(STAT_COSTS[val+1]-STAT_COSTS[val]);
     const canDec=val>1;
     const row=document.createElement('div');row.className='mirror-stat-row';
@@ -2505,7 +2524,7 @@ function renderMirror(){
       <span class="ms-label">${info.icon} ${info.label}</span>
       <span class="ms-desc">${val===1?'<span style="color:var(--danger)">Dumped</span>':val===5?'<span style="color:var(--gold)">Maxed</span>':''}</span>
       <button class="ms-btn" onclick="mirrorAdj('${stat}',-1)" ${canDec?'':'disabled'}>−</button>
-      <span class="ms-val" style="color:${val>=5?'var(--gold)':val<=1?'var(--danger)':'var(--text)'}">${val}</span>
+      <span class="ms-val" style="color:${val>=5?'var(--gold)':val<=1?'var(--danger)':'var(--text)'}">${val}</span>${bonus>0?`<span style="color:var(--success);font-size:.7rem;margin-left:1px">+${bonus}</span>`:''}
       <button class="ms-btn" onclick="mirrorAdj('${stat}',1)" ${canInc?'':'disabled'}>+</button>
     `;
     container.appendChild(row);
@@ -2520,11 +2539,12 @@ function mirrorAdj(stat,dir){
   mirrorStats[stat]=nv;renderMirror();
 }
 function confirmMirror(){
-  // Apply mirror allocation (capped at 5) plus earned bonuses on top (can reach 6)
-  G.pluck=Math.min(6, mirrorStats.pluck+(G.bonuses.pluck||0));
-  G.wit=Math.min(6, mirrorStats.wit+(G.bonuses.wit||0));
-  G.charm=Math.min(6, mirrorStats.charm+(G.bonuses.charm||0));
-  G.luck=Math.min(6, mirrorStats.luck+(G.bonuses.luck||0));
+  // Mirror allocation (cap 5) plus locked quest bonuses on top (no hard cap).
+  G.pluck=mirrorStats.pluck+(G.bonuses.pluck||0);
+  G.wit=mirrorStats.wit+(G.bonuses.wit||0);
+  G.charm=mirrorStats.charm+(G.bonuses.charm||0);
+  G.luck=mirrorStats.luck+(G.bonuses.luck||0);
+  recalcDerived();
   G.mirrorUsed=true;if(G.loc&&G.loc.id==='coop69')G.flags.coopMirrorUsed=true;closeMirror();updateHUD();
   addLog('You step back from the mirror. Something about you has shifted.','magic');
   addLog(`You are now: ${buildFullTitle()}`,'magic');
@@ -4217,7 +4237,8 @@ function useCrackedMirror(){
   // Reset only the MIRROR allocation back to base 2 for each stat
   // Earned bonuses (G.bonuses) are kept and will stack on top after mirror
   const b=G.bonuses||{pluck:0,wit:0,charm:0,luck:0};
-  G.pluck=2;G.wit=2;G.charm=2;G.luck=2;
+  G.pluck=2+(b.pluck||0);G.wit=2+(b.wit||0);G.charm=2+(b.charm||0);G.luck=2+(b.luck||0);
+  recalcDerived();
   G.mirrorUsed=false;
   setTimeout(()=>{
     addLog('The mirror is gone. This is a one-time opportunity. Your quest bonuses remain.','system');
