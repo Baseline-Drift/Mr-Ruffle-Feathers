@@ -511,10 +511,11 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .mirror-pool{font-family:var(--mono);font-size:.72rem;text-align:center;margin-bottom:14px}
 .mirror-pool span{color:var(--gold);font-size:.9rem}
 .mirror-stats{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
-.mirror-stat-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:8px}
+.mirror-stat-row{display:grid;grid-template-columns:auto 1fr auto auto auto auto;align-items:center;gap:8px}
 .ms-label{font-family:'Cinzel',serif;font-size:.72rem;color:var(--text);white-space:nowrap}
 .ms-desc{font-size:.68rem;color:var(--soft);font-style:italic}
 .ms-val{font-family:var(--mono);font-size:.95rem;color:var(--gold);text-align:center;min-width:20px}
+.ms-bonus{font-family:var(--mono);font-size:.7rem;color:var(--success);min-width:24px;text-align:left;white-space:nowrap}
 .ms-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);width:26px;height:26px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;flex-shrink:0}
 .ms-btn:hover:not(:disabled){background:rgba(201,168,76,.15);border-color:var(--gold)}
 .ms-btn:disabled{opacity:.25;cursor:not-allowed}
@@ -604,7 +605,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C21</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C24</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -626,7 +627,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
         <div class="mob-bar-wrap"><div class="mob-bar-fill bar-mp" id="mob-mp-fill" style="width:100%"></div></div>
         <span class="mob-bar-val" id="mob-mp-val">12/12</span>
       </div>
-      <div id="mob-gold-inline">🪙 <span id="mob-gold">10</span> gold &nbsp;🔥<span id="mob-lighter" style="display:none">×3</span></div>
+      <div id="mob-gold-inline">🔩 <span id="mob-gold">10</span> Shinies &nbsp;🔥<span id="mob-lighter" style="display:none">×3</span></div>
     </div>
     <div id="mob-btns">
       <button class="mob-hud-btn" onclick="openCharScreen('pack')"><span class="mob-hud-btn-icon">🎒</span> BAG</button>
@@ -654,7 +655,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
     <div class="stat-row"><span class="stat-label">🍀 Luck</span><span class="stat-val" id="s-luck">2</span></div>
     <div class="cp-section" style="margin-top:4px">Inventory</div>
     <div class="inv-grid" id="inv-grid"></div>
-    <div class="gold-row" style="margin-top:4px"><span class="gold-label">⚜ Gold</span><span class="gold-val" id="s-gold">10</span></div>
+    <div class="gold-row" style="margin-top:4px"><span class="gold-label">🔩 Shinies</span><span class="gold-val" id="s-gold">10</span></div>
     <div class="cp-section" style="margin-top:4px">Status</div>
     <div class="status-txt" id="s-status">No conditions</div>
     <button class="act-btn magic" style="margin-top:6px;font-size:.62rem" onclick="openMirror()">🪞 Visit Mirror</button>
@@ -752,7 +753,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
       <div style="background:var(--surface);border:1px solid var(--border);padding:7px;border-radius:3px;text-align:center">
         <div style="font-size:.85rem">🪙</div>
         <div style="font-family:var(--mono);font-size:.9rem;color:var(--gold)" id="bc-gold">10</div>
-        <div style="font-family:var(--mono);font-size:.42rem;color:var(--soft)">GOLD</div>
+        <div style="font-family:var(--mono);font-size:.42rem;color:var(--soft)">SHINIES</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);padding:7px;border-radius:3px;text-align:center">
         <div style="font-size:.85rem">🔥</div>
@@ -1165,6 +1166,7 @@ function initGame(){
     pluck:2,wit:2,charm:2,luck:2,
     bonuses:{pluck:0,wit:0,charm:0,luck:0},
     gold:10,
+    lostFound:[],
     inv:Array(8).fill(null),
     flags:{},
     score:0,
@@ -1721,6 +1723,7 @@ const ITEMS = {
   ink:      {id:'ink',      icon:'🖋',name:'Void Ink',          desc:'Ink that writes itself. Unnerving.',use:null},
   marked:   {id:'marked',   icon:'🪶',name:'Marked Feather',    desc:'A feather sealed with Void Ink. The Prophecy\'s first token.',use:'use_marked'},
   hatchkey: {id:'hatchkey', icon:'🗝',name:'Containment Key',   desc:'The key to the Hollow Star\'s containment hatch. Still warm.',use:null},
+  dockpass: {id:'dockpass', icon:'🎫',name:'Dock Pass',         desc:'A laminated card, faintly warm, printed by the Oracle. Lists you as CHOSEN BIRD (PROV.), clearance: ADEQUATE. The Docks will admit you. Probably.',use:null},
   orb:      {id:'orb',      icon:'🔮',name:'Echo Orb',          desc:'Pulses with stored memories of the Dovecote. Warm to the touch.',use:'use_orb'},
   potion:   {id:'potion',   icon:'⚗️',name:'Healing Draught',   desc:'Smells of stardust and something sour. Restores 8 HP.',use:'drink_potion'},
   coin:     {id:'coin',     icon:'🪙',name:'Ancient Coin',      desc:'Currency from before the Void Wars. Flip it — if you dare.',use:'flip_coin'},
@@ -1729,16 +1732,31 @@ const ITEMS = {
   collar:   {id:'collar',   icon:'🏅',name:'The Unbrushable\'s Collar',desc:'A trophy from Mrs Fluffinator The Unbrushable. It smells of fury and expensive conditioner.',use:null},
   starchart:{id:'starchart',icon:'🗺️',name:'Star Chart',desc:'Coordinates to the Hollow Star. Pelum kept them for a thousand years. He seems relieved to hand them over.',use:null},
   banana:   {id:'banana',  icon:'🍌',name:'Space Banana',   desc:'Found in the asteroid field. It should not be here. Nothing about this is normal.',use:'use_banana'},
-  note:     {id:'note',     icon:'📝',name:'Mysterious Note',   desc:'Found somewhere unspeakable. Reads: "You owe me 3 gold. — G"',use:null},
+  note:     {id:'note',     icon:'📝',name:'Mysterious Note',   desc:'Found somewhere unspeakable. Reads: "You owe me 3 Shinies. — G"',use:null},
   snack:    {id:'snack',    icon:'🐟',name:'Space Sardines',    desc:'Extremely pungent. Probably useful for something large.',use:'use_snack'},
 };
 
+function loseItemToChest(it){
+  if(!it) return;
+  G.lostFound = G.lostFound || [];
+  G.lostFound.push(it);
+  addLog(`📦 The ${it.icon} ${it.name} slips free and drifts off station-ward, tugged by something large and magnetic. (Marta will have it. Marta always has it.)`,'system');
+}
+function spendSh(amount){
+  G.gold -= amount; updateHUD();
+  if(!G.flags.firstSpend){
+    G.flags.firstSpend = true;
+    setTimeout(()=>addLog('Somewhere down the corridor, a panel sighs loose from the wall and clatters to the deck. Nobody reacts. This is just the economy now.','system'),500);
+  } else if(amount>=5 && Math.random()<0.25){
+    setTimeout(()=>addLog('A rivet you were carrying turns out to have been load-bearing. A distant clang. Best not to investigate.','system'),500);
+  }
+}
 function giveItem(id){
-  const CRITICAL=['scroll','ink','marked','hatchkey','orb','starchart','feather'];
+  const CRITICAL=['scroll','ink','marked','hatchkey','orb','starchart','feather','dockpass'];
   let slot=G.inv.indexOf(null);
   if(slot===-1){
     if(CRITICAL.includes(id)){slot=G.inv.length;G.inv.push(null);}
-    else {addLog('Your pack is full.','system');return false}
+    else {loseItemToChest({...ITEMS[id]});return false}
   }
   G.inv[slot]={...ITEMS[id]};
   if(id==='lighter') G.inv[slot].desc=`${G.lighterFuel} use${G.lighterFuel!==1?'s':''} remaining. "I do not endorse this."`;
@@ -1787,7 +1805,7 @@ function useItem(item){
         if(G.charm<6){
           earnBonus('charm',1);addLog('Charm +1 from sheer audacity.','magic');
         } else {
-          G.gold+=15;updateHUD();addLog('"Your charm is already legendary," the Captain says. Here — take this. It fell out of the void." +15 gold.','magic');
+          G.gold+=15;updateHUD();addLog('"Your charm is already legendary," the Captain says. Here — take this. It fell out of the void." +15 Shinies.','magic');
         }
         addScore(25);setActions();
       } else if(!G.flags.bananaPowered){
@@ -1875,7 +1893,7 @@ function useLighter(){
       addLog('"...Are you trying to light me on fire?" says Vexis.','speech');
       addLog('"No," says Mr. Ruffle Feathers. "I am testing the ambient magical properties of open flame."','ruffle');
       addLog('"The ambient magical properties," Vexis repeats slowly. A long silence.','speech');
-      addLog('Vexis gives you 5 gold for the sheer audacity.','good');G.gold+=5;updateHUD();
+      addLog('Vexis gives you 5 Shinies for the sheer audacity.','good');G.gold+=5;updateHUD();
     },
     market:()=>{
       if(!G.flags.marketFired){
@@ -1884,7 +1902,7 @@ function useLighter(){
         addLog('"RUFFLE FEATHERS," she bellows, from seventeen mouths simultaneously.','speech');
         addLog('"The stall was already on fire when I arrived."','ruffle');
         addLog('In the chaos, a crate splits open.','good');
-        if(!hasItem('potion'))giveItem('potion');else{G.gold+=10;updateHUD();addLog('You pocket 10 gold from the scattered crate.','good')}
+        if(!hasItem('potion'))giveItem('potion');else{G.gold+=10;updateHUD();addLog('You pocket 10 Shinies from the scattered crate.','good')}
       } else {
         addLog('Marta spots the lighter immediately. "Not again. Put that away."','speech');
         addLog('You put it away.','system');G.lighterFuel++;G.fireCount--;updateLighterDesc();updateHUD();
@@ -2005,7 +2023,7 @@ function updateHUD(){
   const grid=document.getElementById('inv-grid');
   if(grid){
     grid.innerHTML='';
-    const QUEST=['scroll','marked','starchart','hatchkey','orb','note','collar'];
+    const QUEST=['scroll','marked','starchart','hatchkey','orb','note','collar','dockpass'];
     const CONSUMABLE=['tea','potion','snack','banana','lighter','coin'];
     const items=G.inv.filter(Boolean);
     const quest=items.filter(i=>QUEST.includes(i.id));
@@ -2524,8 +2542,9 @@ function renderMirror(){
       <span class="ms-label">${info.icon} ${info.label}</span>
       <span class="ms-desc">${val===1?'<span style="color:var(--danger)">Dumped</span>':val===5?'<span style="color:var(--gold)">Maxed</span>':''}</span>
       <button class="ms-btn" onclick="mirrorAdj('${stat}',-1)" ${canDec?'':'disabled'}>−</button>
-      <span class="ms-val" style="color:${val>=5?'var(--gold)':val<=1?'var(--danger)':'var(--text)'}">${val}</span>${bonus>0?`<span style="color:var(--success);font-size:.7rem;margin-left:1px">+${bonus}</span>`:''}
+      <span class="ms-val" style="color:${val>=5?'var(--gold)':val<=1?'var(--danger)':'var(--text)'}">${val}</span>
       <button class="ms-btn" onclick="mirrorAdj('${stat}',1)" ${canInc?'':'disabled'}>+</button>
+      <span class="ms-bonus">${bonus>0?'+'+bonus:''}</span>
     `;
     container.appendChild(row);
   });
@@ -2569,7 +2588,7 @@ function switchTab(tab){
 function renderBagTab(){
   const el=document.getElementById('tab-pack');
   const items=G.inv.filter(Boolean);
-  el.innerHTML=`<div class="pack-gold">⚜ Gold: ${G.gold} &nbsp;·&nbsp; ${items.length}/${G.inv.length} slots used</div>`;
+  el.innerHTML=`<div class="pack-gold">🔩 Shinies: ${G.gold} &nbsp;·&nbsp; ${items.length}/${G.inv.length} slots used</div>`;
   if(items.length===0){el.innerHTML+=`<div class="pack-empty">"I am travelling light. By necessity."</div>`;return}
   const grid=document.createElement('div');grid.className='pack-grid';
   items.forEach(item=>{
@@ -3228,7 +3247,7 @@ function lookAround(){
         rollDice('Notice Something in the Antechamber','luck',10,(o)=>{
           if(o==='crit'||o==='success'){
             addLog('On a ledge near the entrance — a small coin, left by some previous visitor.','good');
-            if(!hasItem('coin'))giveItem('coin');else{G.gold+=5;updateHUD();addLog('+5 gold.','good');}
+            if(!hasItem('coin'))giveItem('coin');else{G.gold+=5;updateHUD();addLog('+5 Shinies.','good');}
           } else addLog('"Bare walls. An eye. The usual."','ruffle');
         });
       }
@@ -3256,7 +3275,7 @@ function lookAround(){
         rollDice('Search the Docking Bay','luck',9,(o)=>{
           if(o==='crit'||o==='success'){
             addLog('Behind a tool cabinet — a tin of Space Sardines, left by a previous engineer.','good');
-            if(!hasItem('snack'))giveItem('snack');else{G.gold+=8;updateHUD();addLog('+8 gold.','good');}
+            if(!hasItem('snack'))giveItem('snack');else{G.gold+=8;updateHUD();addLog('+8 Shinies.','good');}
           } else addLog('"Grease, cables, and the faint smell of ambition."','ruffle');
         });
       }
@@ -3268,7 +3287,7 @@ function lookAround(){
         G.flags.coopSearched=true;
         addLog('Under the bunk mattress — a lighter fuel canister. Emergency supplies.','good');
         if(G.lighterFuel<3){G.lighterFuel=Math.min(3,G.lighterFuel+1);updateHUD();addLog('+1 lighter fuel.','good');}
-        else{G.gold+=5;updateHUD();addLog('+5 gold — lighter already full.','good');}
+        else{G.gold+=5;updateHUD();addLog('+5 Shinies — lighter already full.','good');}
       }
       if(!G.flags.crackedMirrorFound){
         G.flags.crackedMirrorFound=true;
@@ -3412,7 +3431,7 @@ const LOCATIONS = {
         // If inventory full, try to make room by dropping the note (least useful item)
         if(G.inv.filter(Boolean).length>=8){
           const noteSlot=G.inv.findIndex(i=>i&&i.id==='note');
-          if(noteSlot>-1){G.inv[noteSlot]=null;addLog('You drop the mysterious note to make room.','system')}
+          if(noteSlot>-1){loseItemToChest(G.inv[noteSlot]);G.inv[noteSlot]=null;}
           else{addLog('Your pack is full. Drop something first.','system');return}
         }
         G.flags.orbTaken=true;
@@ -3420,7 +3439,6 @@ const LOCATIONS = {
         addLog('The Echo Orb drifts into your wing, warm as a held secret.','magic');
         setActions();
       }});
-      btns.push({label:'💀 Enter Wraith Corridors',fn:()=>securityPigeon(),cls:'danger'});
       return {context:'The Dovecote listens to your every step.',buttons:[...btns]};
     }
   },
@@ -3445,8 +3463,8 @@ const LOCATIONS = {
         btns.push({label:n>1?'⚔ Fight the Wraiths':'⚔ Fight the Patrol Wraith',fn:()=>wraith1Fight(),cls:'danger'});
         btns.push({label:n>1?'🎭 Attempt to Slip Past':'🎭 Attempt to Outwit It',fn:()=>wraith1Outwit()});
       }
-      if(G.flags.wraith1Done)btns.push({label:'🚀 Enter the Docking Bay',fn:()=>travelTo('docking')});
-      btns.push({label:'← Retreat to the Dovecote',fn:()=>travelTo('dovecote')});
+      if(G.flags.wraith1Done)btns.push({label:'🚀 Board the Coop 69',fn:()=>travelTo('coop69')});
+      btns.push({label:'← Retreat to the Docking Bay',fn:()=>travelTo('docking')});
       return {context:'Darkness presses in. Something moves.',buttons:[...btns]};
     }
   },
@@ -3456,19 +3474,18 @@ const LOCATIONS = {
     onEnter(){
       if(!G.flags.dockingVisited){
         G.flags.dockingVisited=true;
-        addLog("The Docking Bay is at the far end of the station, past a door that wasn't on any map you've seen. The Coop 69 sits in its berth, engines cold.",'narrate');
+        addLog("The Docking Bay receiving area: crates of undelivered mail, a cold cup of something, a hand-lettered sign reading PASSES READY. Beyond a dim service corridor you can just make out the Coop 69 in its berth, engines cold.",'narrate');
         addLog("It is a small, battered shuttle with a name painted on the hull in letters that are slightly too large for the available space.",'narrate');
         addLog('"I named it," Mr. Ruffle Feathers says. He does not elaborate. He clearly does not remember doing this.','ruffle');
       } else {
-        addLog("The Docking Bay. The Coop 69 waits with quiet dignity.",'narrate');
+        addLog("The Docking Bay receiving area. The mail waits. The Coop 69 waits, further in, with quiet dignity.",'narrate');
       }
     },
     actions(){
       const btns=[
-        {label:'🚀 Board the Coop 69',fn:()=>travelTo('coop69')},
-        {label:'← Return to Corridors',fn:()=>travelTo('corridors')},
+        {label:'💀 Enter the Wraith Corridors',fn:()=>securityPigeon(),cls:'danger'},
       ];
-      return {context:'The Coop 69 awaits.',buttons:[...btns]};
+      return {context:'The mail waits, unbothered. The Coop 69 waits, further in.',buttons:[...btns]};
     }
   },
 
@@ -3588,14 +3605,13 @@ const LOCATIONS = {
 
 const DECKS=[
   {name:'Habitation Deck', rooms:['nest']},
-  {name:'Commerce Deck', rooms:['market','library']},
-  {name:'Sanctum Deck', rooms:['antechamber','dovecote']},
-  {name:'Docking Bay', rooms:['docking']},
+  {name:'Commerce Deck', rooms:['market','docking']},
+  {name:'Sanctum Deck', rooms:['antechamber','dovecote','library']},
 ];
 function roomDeck(id){return DECKS.find(d=>d.rooms.includes(id))||null;}
 function roomUnlocked(id){
   if(id==='library') return !!(G.flags.pelumDirected||G.flags.libraryVisited);
-  if(id==='docking') return !!(G.visited&&G.visited.docking);
+  if(id==='docking') return !!G.flags.docksCleared;
   return true; // nest, market, antechamber, dovecote are always reachable
 }
 function openLift(){
@@ -3612,6 +3628,7 @@ function openLift(){
         ? `<div class="lift-room here">${nm} <span class="lift-tag">you are here</span></div>`
         : `<div class="lift-room" data-r="${r}">→ ${nm}</div>`;
     });
+    if(isCommerce && !G.flags.docksCleared) html+='<div class="lift-room closed" id="lift-docks">🔒 The Docks <span class="lift-tag">restricted</span></div>';
     if(isCommerce) html+='<div class="lift-room closed" id="lift-dining">✕ Dining Hall <span class="lift-tag">closed</span></div>';
   });
   html+='<div class="lift-status" id="lift-status"></div>';
@@ -3620,14 +3637,16 @@ function openLift(){
   document.querySelectorAll('#mg-box .lift-room[data-r]').forEach(el=>{
     el.onclick=()=>{const r=el.dataset.r;closeMG();travelTo(r);};
   });
+  const docks=document.getElementById('lift-docks');
+  if(docks)docks.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='The Docks — RESTRICTED. Mail and cargo only. The Dockmaster requires authorisation you do not currently possess. (The Oracle issues dock passes, apparently. Take it up with the Oracle.)';};
   const dining=document.getElementById('lift-dining');
   if(dining)dining.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='Dining Hall — CLOSED FOLLOWING AN INCIDENT. No further detail is offered. The faint smell offers some, unprompted. Mr. Ruffle Feathers elects not to investigate, for once in his life.';};
   const cl=document.getElementById('lift-close-btn');if(cl)cl.onclick=()=>closeMG();
 }
 function securityPigeon(){
   if(G.flags.dovecoteDone){
-    addLog("The security pigeon glances at the Dovecote’s mark on your feather, nods once, and steps aside. \"Cleared. Good luck in there.\"",'speech');
-    addLog('A pause. "Genuinely. I\'ve seen the footage."','speech');
+    addLog("The security pigeon examines your dock pass at length. \"'CHOSEN BIRD — PROVISIONAL.' Provisional. Marvellous.\" It checks the Dovecote’s mark on your feather, nods once, and steps aside.",'speech');
+    addLog('"Cleared. Mind the wraiths. And the mail. Mostly the wraiths." A pause. "Genuinely. I\'ve seen the footage."','speech');
     setTimeout(()=>travelTo('corridors'),500);
     return;
   }
@@ -3861,7 +3880,7 @@ function searchToilet(){
       addLog('Tucked behind the mirror — a small note.',' good');
       giveItem('note');addScore(10);
     } else if(outcome==='partial'){
-      addLog('You find 3 gold coins in a crack behind the toilet. You try not to think about why they are wet.',' good');
+      addLog('You find 3 loose rivets in a crack behind the toilet. You try not to think about why they are wet. +3 Shinies.',' good');
       G.gold+=3;updateHUD();
     } else if(outcome==='fumble'){
       addLog('You slip. You are fine. Your dignity is not. -1 HP from the indignity alone.',' bad');
@@ -3975,7 +3994,7 @@ function vexisCharmCheck(){
     if(outcome==='crit'||outcome==='success'){
       addLog('Vexis pauses. Something that might be amusement crosses the ancient eye.','narrate');
       addLog('"Your protestations are refreshing. Nevertheless — take this."','speech');
-      giveItem('potion');addScore(30);G.flags.vexisGaveTask=true;G.flags.pelumDirected=true;setActions();
+      giveItem('potion');addScore(30);G.flags.vexisGaveTask=true;G.flags.pelumDirected=true;clearDocks();setActions();
     } else if(outcome==='partial'){
       addLog('"There is no mistake. But I respect the attempt."','speech');vexisTask();
     } else {
@@ -3983,10 +4002,20 @@ function vexisCharmCheck(){
     }
   });
 }
+function clearDocks(){
+  if(G.flags.docksCleared) return;
+  G.flags.docksCleared=true;
+  setTimeout(()=>{
+    addLog('Then — somewhere beneath the altar — a mechanical whirr, a chunk, and the unmistakable sound of a label printer.','narrate');
+    addLog('A laminated card slides out, faintly warm. The Oracle nudges it toward you with one ancient talon. "The Docks will now admit you. Mind the mail."','speech');
+    addLog('"Why," says Mr. Ruffle Feathers, "does a temple have a label printer?" The Oracle does not answer. The Oracle never answers the useful questions.','ruffle');
+    giveItem('dockpass');setActions();
+  },700);
+}
 function vexisTask(){
   addLog('Vexis explains: create the Marked Feather — your feather sealed with Void Ink — and use it to unlock the The Dovecote.','narrate');
   addLog('"The Void Ink can be found at Marta\'s stall. Combine it with one of your own feathers."','speech');
-  G.flags.vexisGaveTask=true;addScore(25);setActions();
+  G.flags.vexisGaveTask=true;addScore(25);clearDocks();setActions();
 }
 function vexisRepeat(){
   const done=()=>setActions();
@@ -4047,24 +4076,55 @@ function martaShop(){
         setTimeout(()=>martaShop(),800);
       });
     }}:null,
-    inkAvail&&G.gold>=inkPrice?{text:`Buy Void Ink (${inkPrice} gold)`,fn:()=>{G.flags.martaSoldInk=true;G.gold-=inkPrice;giveItem('ink');updateHUD();addLog('Marta hands over the Void Ink.','narrate');martaShop()}}:null,
-    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}g) — can't afford`,fn:()=>{}}:null,
-    potAvail&&G.gold>=potPrice?{text:`Buy Healing Draught (${potPrice} gold)`,fn:()=>{G.flags.martaSoldPotion=true;G.gold-=potPrice;giveItem('potion');updateHUD();addLog('Marta tucks a potion into your wing.','narrate');martaShop()}}:null,
-    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}g) — can't afford`,fn:()=>{}}:null,
+    inkAvail&&G.gold>=inkPrice?{text:`Buy Void Ink (${inkPrice} Shinies)`,fn:()=>{G.flags.martaSoldInk=true;spendSh(inkPrice);giveItem('ink');updateHUD();addLog('Marta hands over the Void Ink.','narrate');martaShop()}}:null,
+    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}🔩) — can't afford`,fn:()=>{}}:null,
+    potAvail&&G.gold>=potPrice?{text:`Buy Healing Draught (${potPrice} Shinies)`,fn:()=>{G.flags.martaSoldPotion=true;spendSh(potPrice);giveItem('potion');updateHUD();addLog('Marta tucks a potion into your wing.','narrate');martaShop()}}:null,
+    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}🔩) — can't afford`,fn:()=>{}}:null,
     hasItem('coin')?{text:'Show the Ancient Coin',fn:()=>martaCoin()}:null,
-    !hasItem('snack')&&!G.flags.martaSoldSnack?{text:`Buy Space Sardines (${angry?6:3} gold)`,fn:()=>{const p=angry?6:3;if(G.gold<p){addLog("Can't afford it.",'system');setTimeout(()=>martaShop(),600);return}G.flags.martaSoldSnack=true;G.gold-=p;giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
+    !hasItem('snack')&&!G.flags.martaSoldSnack?{text:`Buy Space Sardines (${angry?6:3} Shinies)`,fn:()=>{const p=angry?6:3;if(G.gold<p){addLog("Can't afford it.",'system');setTimeout(()=>martaShop(),600);return}G.flags.martaSoldSnack=true;spendSh(p);giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
     !G.flags.basementHinted?{text:'"What\'s happening on the station?"',fn:()=>martaGossip()}:null,
     G.flags.basementHinted?{text:'"Anything else going on?"',fn:()=>martaGossip()}:null,
+    G.lostFound&&G.lostFound.length?{text:`🧲 Lost & Found (${G.lostFound.length})`,fn:()=>martaLostFound()}:null,
     {text:'Leave',fn:()=>setActions()},
   ].filter(Boolean));
 }
+function martaLostFound(){
+  G.lostFound = G.lostFound || [];
+  if(!G.lostFound.length){showDlg(NPCS.marta,'"Chest\'s empty. Nothing of yours floating about today. A single sock orbits past, judgmentally."',[{text:'← Back',fn:()=>martaShop()}]);return}
+  const choices=G.lostFound.map((it,idx)=>({text:`Reclaim ${it.icon} ${it.name}`,fn:()=>reclaimLost(idx)}));
+  choices.push({text:'← Back',fn:()=>martaShop()});
+  showDlg(NPCS.marta,'"Ah — lost something?" Marta gestures at a slowly rotating heap behind her, held together by the station\'s own magnet. "Funny how it all ends up here. Funny how it\'s mine now. Anyway."',choices);
+}
+function reclaimLost(idx){
+  const it=G.lostFound[idx]; if(!it) return;
+  if(G.inv.indexOf(null)===-1){addLog('"You\'ve nowhere to put it. It stays in the heap. The heap is patient."','speech');setTimeout(()=>martaLostFound(),700);return}
+  const angry=G.flags.marketFired&&!G.flags.martaForgiven;
+  if(angry){
+    if(G.gold<5){addLog('"Five Shinies. No charm, no discount, no exceptions. Come back when you can pay."','speech');setTimeout(()=>martaLostFound(),700);return}
+    spendSh(5);finishReclaim(idx);return;
+  }
+  rollDice('Haggle with Marta','charm',12,(o)=>{
+    const fee=(o==='crit'||o==='success')?1:5;
+    if(G.gold<fee){addLog('"Empty pockets, empty hands. Come back when one of them isn\'t."','speech');setTimeout(()=>martaLostFound(),700);return}
+    spendSh(fee);
+    addLog(fee===1?'"...Fine. One Shiny. Processing fee. I\'m legally obligated to charge something."':'"Five Shinies. Standard rate for your own property."','speech');
+    finishReclaim(idx);
+  });
+}
+function finishReclaim(idx){
+  const it=G.lostFound.splice(idx,1)[0];
+  const slot=G.inv.indexOf(null); if(slot>-1) G.inv[slot]=it;
+  updateHUD();
+  addLog(`Marta plucks your ${it.icon} ${it.name} from the orbit of misplaced things and slides it back across the counter. "Pleasure doing business. With you. About your own property."`,'narrate');
+  setTimeout(()=>martaLostFound(),900);
+}
 function martaCoin(){
-  addLog('"Oh! This is from the Before-Time. Worth twenty-five gold. Easily."','speech');
-  removeItem('coin');G.gold+=25;updateHUD();addLog('Marta counts out 25 gold.','good');addScore(20);G.flags.soldCoin=true;
+  addLog('"Oh! This is from the Before-Time. Worth twenty-five Shinies. Easily."','speech');
+  removeItem('coin');G.gold+=25;updateHUD();addLog('Marta counts out 25 Shinies.','good');addScore(20);G.flags.soldCoin=true;
   setTimeout(()=>martaShop(),600);
 }
 function martaGossip(){
-  addLog('"Wraiths have been thicker in the corridors all week," Marta says, lowering three of her voices. "The Docking Bay is through the corridors — there\'s a shuttle there, if you need to go anywhere the station can\'t take you."','speech');
+  addLog('"Wraiths have been thicker in the corridors all week," Marta says, lowering three of her voices. "The Docks are just down on this deck — mail side. Locked, mind. You\'ll want a pass off the Oracle before the Dockmaster lets you near a shuttle."','speech');
   addScore(15);G.flags.keyHintGiven=true;
   if(!G.flags.basementHinted){
     G.flags.basementHinted=true;
@@ -4138,7 +4198,7 @@ function pelumCharm(){
     rollDice('Charm Pelum','charm',11,(outcome)=>{
       if(outcome==='crit'||outcome==='success'){
         addLog('Pelum beams with all eight eyes. "You are TOO kind. Here — I\'ve been saving this."','speech');
-        if(!hasItem('potion'))giveItem('potion');else{G.gold+=8;updateHUD();addLog('+8 gold from Pelum\'s gratitude.','good')}
+        if(!hasItem('potion'))giveItem('potion');else{G.gold+=8;updateHUD();addLog('+8 Shinies from Pelum\'s gratitude.','good')}
         addScore(25);
       } else {
         addLog('"That is a very kind thing to say," Pelum says, pleasantly. Nothing else happens.','speech');
@@ -4347,7 +4407,7 @@ function felidaeEscape(){
       addLog('"No," says everyone, because they are also not supposed to be talking to birds.','narrate');
       addLog('Mr. Ruffle Feathers has acquired something in the confusion. He does not know what. He does not look until he is in hyperspace.','good');
       G.flags.felidaeSneaked=true;
-      giveItem('coin');G.gold+=20;updateHUD();addLog('+20 gold and an Ancient Coin, origin unclear.','good');
+      giveItem('coin');G.gold+=20;updateHUD();addLog('+20 Shinies and an Ancient Coin, origin unclear.','good');
       addScore(60);travelTo('coop69');
     } else {
       addLog('A tail flicks. Eight eyes turn. Mrs Fluffinator has peripheral vision in all directions.','bad');
