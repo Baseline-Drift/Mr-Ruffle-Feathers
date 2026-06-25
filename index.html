@@ -616,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C25</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C27</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -2676,7 +2676,7 @@ function setActions(customActions){
 
   // Distribute buttons into tabs
   const talkKeywords=['speak','talk','meet','archivist','pelum','marta','vexis','oracle','blubberstiltskin','captain','keeper','npc','dialogue'];
-  const goKeywords=['return','travel','go to','head to','docking','nest','market','dovecote','corridors','basement','coop','hollow','library','antechamber','facilities'];
+  const goKeywords=['return','travel','go to','head to','docking','nest','market','dovecote','corridors','basement','coop','hollow','library','antechamber','facilities','proceed','retreat to','roost','sorting','pigeonhole','transit','plot course','launch','set course'];
   const lookKeywords=['look','search','examine','browse','read','study','investigate','notice'];
 
   const tabs={act:[],talk:[],go:[],look:[]};
@@ -2709,7 +2709,7 @@ function setActions(customActions){
   updateTabBadges();
 
   // Auto-switch to first populated tab
-  const firstTab=['act','talk','go','look'].find(t=>tabs[t].length>0)||'act';
+  const firstTab=(acts.preferredTab&&tabs[acts.preferredTab]&&tabs[acts.preferredTab].length)?acts.preferredTab:(['act','talk','go','look'].find(t=>tabs[t].length>0)||'act');
   switchUITab(firstTab);
 }
 
@@ -3579,7 +3579,7 @@ const LOCATIONS = {
           ? {label:'← Return to Hollow Star',fn:()=>travelTo('hollow_star')}
           : {label:'← Return to the Pigeonholes',fn:()=>travelTo('pigeonholes')},
       ];
-      return {context:'The control panel awaits your input.',buttons:btns.filter(Boolean)};
+      return {context:'The control panel awaits your input.',buttons:btns.filter(Boolean),preferredTab:'go'};
     }
   },
 
