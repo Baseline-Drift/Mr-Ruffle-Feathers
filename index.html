@@ -553,6 +553,17 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 .bsr-val.dumped{color:var(--danger)}
 .bsr-val.boosted{color:var(--success)}
 .bsr-desc{font-size:.72rem;color:var(--soft);font-style:italic;line-height:1.4}
+.bsr-eff{font-size:.66rem;color:var(--gold);font-family:var(--mono);margin-top:4px;letter-spacing:.02em}
+.bird-vitals{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.bv-row{display:flex;align-items:center;gap:8px}
+.bv-lbl{font-family:var(--mono);font-size:.6rem;color:var(--soft);width:24px}
+.bv-bar{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.bv-fill{height:100%;border-radius:5px}
+.bv-val{font-family:var(--mono);font-size:.62rem;color:var(--text);min-width:46px;text-align:right}
+.bird-counters{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.bcount{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:4px;padding:7px 4px;text-align:center}
+.bcount-v{font-family:var(--mono);font-size:1rem;color:var(--gold)}
+.bcount-l{font-family:var(--mono);font-size:.5rem;color:var(--soft);letter-spacing:.04em;margin-top:2px}
 .mirror-link-btn{width:100%;padding:10px;font-family:'Cinzel',serif;font-size:.78rem;background:rgba(201,168,76,.08);border:1px solid var(--gold-dim);color:var(--gold);cursor:pointer;letter-spacing:.06em;transition:background .15s}
 .mirror-link-btn:hover{background:rgba(201,168,76,.15)}
 .mirror-link-btn:disabled{opacity:.3;cursor:not-allowed}
@@ -605,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C24</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C25</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -631,7 +642,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
     </div>
     <div id="mob-btns">
       <button class="mob-hud-btn" onclick="openCharScreen('pack')"><span class="mob-hud-btn-icon">🎒</span> BAG</button>
-      <button class="mob-hud-btn" onclick="pigeonCoo();showBirdCard()"><span class="mob-hud-btn-icon">🐦</span> BIRD</button>
+      <button class="mob-hud-btn" onclick="pigeonCoo();openCharScreen('bird')"><span class="mob-hud-btn-icon">🐦</span> BIRD</button>
     </div>
   </div>
 
@@ -807,7 +818,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
     <div class="combat-title">⚔ Combat ⚔</div>
     <div class="combat-parties">
       <div class="combat-party">
-        <span class="combat-party-icon">🚁</span>
+        <span class="combat-party-icon" id="c-player-icon">🐦</span>
         <div class="combat-party-name">Mr. Ruffle Feathers</div>
         <div class="combat-bar-row">
           <span class="combat-bar-label">HP</span>
@@ -1112,7 +1123,7 @@ const STAT_INFO = {
   charm:{icon:'💬',label:'Charm',desc:'Persuasion and presence. Affects NPC dialogue, haggling, and talking your way out of trouble.'},
   luck:{icon:'🍀',label:'Luck',desc:'Fortune and chaos. Triggers passive rolls, coin flips, item finds and unexpected windfalls.'},
 };
-const MIRROR_POOL = 6;
+const MIRROR_POOL = 5;
 
 function calcTitleBase(stats){
   const {pluck,wit,charm,luck}=stats;
@@ -1723,7 +1734,7 @@ const ITEMS = {
   ink:      {id:'ink',      icon:'🖋',name:'Void Ink',          desc:'Ink that writes itself. Unnerving.',use:null},
   marked:   {id:'marked',   icon:'🪶',name:'Marked Feather',    desc:'A feather sealed with Void Ink. The Prophecy\'s first token.',use:'use_marked'},
   hatchkey: {id:'hatchkey', icon:'🗝',name:'Containment Key',   desc:'The key to the Hollow Star\'s containment hatch. Still warm.',use:null},
-  dockpass: {id:'dockpass', icon:'🎫',name:'Dock Pass',         desc:'A laminated card, faintly warm, printed by the Oracle. Lists you as CHOSEN BIRD (PROV.), clearance: ADEQUATE. The Docks will admit you. Probably.',use:null},
+  dockpass: {id:'dockpass', icon:'🎫',name:'Pigeonhole Pass',     desc:'A laminated card, faintly warm, printed by the Oracle. Lists you as CHOSEN BIRD (PROV.), clearance: ADEQUATE. The Pigeonholes will admit you. Probably.',use:null},
   orb:      {id:'orb',      icon:'🔮',name:'Echo Orb',          desc:'Pulses with stored memories of the Dovecote. Warm to the touch.',use:'use_orb'},
   potion:   {id:'potion',   icon:'⚗️',name:'Healing Draught',   desc:'Smells of stardust and something sour. Restores 8 HP.',use:'drink_potion'},
   coin:     {id:'coin',     icon:'🪙',name:'Ancient Coin',      desc:'Currency from before the Void Wars. Flip it — if you dare.',use:'flip_coin'},
@@ -1738,12 +1749,18 @@ const ITEMS = {
 
 function loseItemToChest(it){
   if(!it) return;
+  if(it.id==='coin'){
+    G.flags.deniedCoins=(G.flags.deniedCoins||0)+1;
+    addLog('📦 The 🪙 Ancient Coin slips free and drifts off station-ward, tugged by something large and magnetic.','system');
+    return;
+  }
   G.lostFound = G.lostFound || [];
   G.lostFound.push(it);
   addLog(`📦 The ${it.icon} ${it.name} slips free and drifts off station-ward, tugged by something large and magnetic. (Marta will have it. Marta always has it.)`,'system');
 }
 function spendSh(amount){
   G.gold -= amount; updateHUD();
+  addLog(`🔩 −${amount} ${amount===1?'Shiny':'Shinies'}.`,'system');
   if(!G.flags.firstSpend){
     G.flags.firstSpend = true;
     setTimeout(()=>addLog('Somewhere down the corridor, a panel sighs loose from the wall and clatters to the deck. Nobody reacts. This is just the economy now.','system'),500);
@@ -1856,9 +1873,9 @@ function flipCoin(){
   addLog('"Unless I drop it. Which I won\'t."','ruffle');
   rollDice('Coin Flip','luck',10,(outcome)=>{
     if(outcome==='fumble'||outcome==='fail'){
-      addLog('The coin glints — and slips. It bounces twice, rolls to the edge, and falls into a vent. Gone forever.','bad');
-      addLog('"I said I wouldn\'t drop it," Mr. Ruffle Feathers says quietly.','ruffle');
-      removeItem('coin');
+      addLog('The coin glints — and slips. It bounces twice, rolls to the edge, and vanishes station-ward, tugged by something large and magnetic.','bad');
+      addLog('"...It will turn up," Mr. Ruffle Feathers says, with the hollow certainty of a bird who has met Marta.','ruffle');
+      removeItem('coin');G.flags.deniedCoins=(G.flags.deniedCoins||0)+1;
     } else {
       addLog('The coin spins beautifully and lands in your wing. Heads. You keep it.','good');
       addLog('"As expected," says Mr. Ruffle Feathers, trying not to look relieved.','ruffle');
@@ -2264,6 +2281,11 @@ const NPCS={
 // ============================================================
 function startCombat(enemy,onWin,onLose){
   combatState={...enemy,onWin,onLose,defending:false,round:1};
+  // Reset overlay to GROUND mode (space combat mutates title/avatar/bars)
+  {const _t=document.querySelector('#combat-overlay .combat-title');if(_t)_t.textContent='⚔ Combat ⚔';
+   const _pi=document.getElementById('c-player-icon');if(_pi)_pi.textContent='🐦';
+   const _mpb=document.getElementById('c-player-mp-bar');if(_mpb&&_mpb.closest('.combat-bar-row'))_mpb.closest('.combat-bar-row').style.display='';
+   const _er=document.getElementById('sc-energy-row');if(_er)_er.style.display='none';}
   document.getElementById('c-enemy-icon').textContent=enemy.icon;
   document.getElementById('c-enemy-name').textContent=enemy.name;
   document.getElementById('combat-log').innerHTML='';
@@ -2307,7 +2329,6 @@ function setCombatBtns(){
     {l:'🛡 Defend',cls:'',a:'defend'},
     {l:'💬 Taunt',cls:'',a:'taunt'},
     {l:'🏃 Flee',cls:'danger',a:'flee'},
-    {l:'⏭ End Turn',cls:'',a:'endturn'}, // persistent slot; enabled only after main, before bonus
   ];
 
   const poopLocked = !lowHp || G.mp<5;
@@ -2323,7 +2344,7 @@ function setCombatBtns(){
   const leftCol=document.createElement('div');leftCol.style.cssText='display:flex;flex-direction:column;gap:5px';
   mainActions.forEach(b=>{
     const btn=document.createElement('button');btn.className='act-btn '+(b.cls||'');btn.textContent=b.l;
-    btn.disabled = b.a==='endturn' ? (!mainDone||bonusDone) : mainDone;
+    btn.disabled=mainDone;
     btn.onclick=()=>doCombat(b.a,'main');leftCol.appendChild(btn);
   });
   leftWrap.appendChild(leftCol);
@@ -2343,6 +2364,9 @@ function setCombatBtns(){
 
   a.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0';
   a.appendChild(leftWrap);a.appendChild(rightWrap);
+  const endBtn=document.createElement('button');endBtn.className='act-btn';endBtn.textContent='⏭ End Turn';
+  endBtn.style.gridColumn='1/-1';endBtn.disabled=!mainDone||bonusDone;
+  endBtn.onclick=()=>doCombat('endturn','main');a.appendChild(endBtn);
 
   if(canPoop&&!combatState.poopHinted){combatState.poopHinted=true;cLog('💩 Low health — Poop Bomb unlocked!')}
 }
@@ -2499,7 +2523,7 @@ function showModal(icon,title,text,btns){
   document.getElementById('modal-title').textContent=title;
   document.getElementById('modal-text').textContent=text;
   const bc=document.getElementById('modal-btns');bc.innerHTML='';
-  btns.forEach(b=>{const btn=document.createElement('button');btn.className='act-btn';btn.textContent=b.label;btn.onclick=b.fn;bc.appendChild(btn)});
+  btns.forEach(b=>{const btn=document.createElement('button');btn.className='act-btn';btn.textContent=b.label;if(b.disabled){btn.disabled=true;}else{btn.onclick=b.fn;}bc.appendChild(btn)});
   document.getElementById('modal-overlay').classList.add('active');
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('active')}
@@ -2603,6 +2627,10 @@ function renderBirdTab(){
   const el=document.getElementById('tab-bird');
   const title=buildFullTitle();
   const inNest=G.loc&&G.loc.id==='nest';
+  const eff=k=> k==='pluck'?`Max HP ${G.maxHp} · +2 per point`
+    : k==='wit'?`Max MP ${G.maxMp} · +2 per point`
+    : k==='luck'?`Crit ${5+G.luck*3}% · ×1.5 damage`
+    : `Shop prices · Taunt strength`;
   el.innerHTML=`
     <div class="bird-title-section">
       <span class="bird-icon">🐦</span>
@@ -2616,8 +2644,21 @@ function renderBirdTab(){
         return `<div class="bird-stat-row">
           <div class="bsr-top"><span class="bsr-name">${info.icon} ${info.label}</span><span class="bsr-val ${cls}">${v}${v>=5?' ★':v<=1?' ↓':v>2?' ↑':''}</span></div>
           <div class="bsr-desc">${info.desc}</div>
+          <div class="bsr-eff">▸ ${eff(k)}</div>
         </div>`;
       }).join('')}
+    </div>
+    <div class="bird-vitals">
+      <div class="bv-row"><span class="bv-lbl">HP</span><div class="bv-bar"><div class="bv-fill" style="width:${G.hp/G.maxHp*100}%;background:linear-gradient(90deg,#8b0000,var(--danger))"></div></div><span class="bv-val">${G.hp}/${G.maxHp}</span></div>
+      <div class="bv-row"><span class="bv-lbl">MP</span><div class="bv-bar"><div class="bv-fill" style="width:${G.mp/G.maxMp*100}%;background:linear-gradient(90deg,#1a3a6b,#4a90d9)"></div></div><span class="bv-val">${G.mp}/${G.maxMp}</span></div>
+    </div>
+    <div class="bird-counters">
+      <div class="bcount"><div class="bcount-v">${G.gold}</div><div class="bcount-l">🔩 SHINIES</div></div>
+      <div class="bcount"><div class="bcount-v">${G.fireCount||0}</div><div class="bcount-l">🔥 FIRES</div></div>
+      <div class="bcount"><div class="bcount-v">${G.toiletCount||0}</div><div class="bcount-l">🚽 VISITS</div></div>
+      <div class="bcount"><div class="bcount-v">${G.flapCount||0}</div><div class="bcount-l">🪶 FLAPS</div></div>
+      <div class="bcount"><div class="bcount-v">${G.cooCount||0}</div><div class="bcount-l">🕊 COOS</div></div>
+      <div class="bcount"><div class="bcount-v">${G.score||0}</div><div class="bcount-l">⭐ SCORE</div></div>
     </div>
     <button class="mirror-link-btn" onclick="closeCharScreen();${inNest?'openMirror()':''}" ${inNest?'':'disabled'}>${inNest?'🪞 Visit the Mirror':'🪞 Mirror available in The Nest only'}</button>
   `;
@@ -3269,16 +3310,20 @@ function lookAround(){
       }
     },
     docking: ()=>{
-      addLog('"The Coop 69 sits in its bay, looking somehow smug. The name is painted in large letters on the hull. You painted it yourself, apparently. You have no memory of this."','ruffle');
+      addLog('"Walls of cubbyholes, every one stuffed with post nobody came back for. A brass sign reads AVIAN MAIL PROCESSING. The Security Pigeon watches you the way mail watches a fire."','ruffle');
       if(!G.flags.dockingSearched){
         G.flags.dockingSearched=true;
-        rollDice('Search the Docking Bay','luck',9,(o)=>{
+        rollDice('Search the Sorting Roost','luck',9,(o)=>{
           if(o==='crit'||o==='success'){
-            addLog('Behind a tool cabinet — a tin of Space Sardines, left by a previous engineer.','good');
+            addLog('Wedged in an unclaimed parcel — a tin of Space Sardines, addressed to no one in particular.','good');
             if(!hasItem('snack'))giveItem('snack');else{G.gold+=8;updateHUD();addLog('+8 Shinies.','good');}
-          } else addLog('"Grease, cables, and the faint smell of ambition."','ruffle');
+          } else addLog('"Envelopes, dust, and the faint smell of ambition gone stale."','ruffle');
         });
       }
+    },
+    pigeonholes: ()=>{
+      addLog('"The Coop 69 sits in its berth, looking somehow smug. The name is painted in large letters on the hull. You painted it yourself, apparently. You have no memory of this."','ruffle');
+      addLog('"A wall of berths, each a slot the wrong shape for what it holds. Your shuttle has, in the most literal sense, been filed."','narrate');
     },
     coop69: ()=>{
       addLog('"Small. Functional. A helicopter, technically. In space. The controls are labelled in a handwriting Mr. Ruffle Feathers recognises as his own."','narrate');
@@ -3444,16 +3489,16 @@ const LOCATIONS = {
   },
 
   corridors:{
-    id:'corridors',name:'The Wraith Corridors',artKey:'corridors',
+    id:'corridors',name:'The Transit Corridors',artKey:'corridors',
     onEnter(){
       if(!G.flags.corridorsVisited){
         G.flags.corridorsVisited=true;
-        addLog("The Wraith Corridors are what happens when a section of a space station decides to become haunted. The lights work on a schedule known only to themselves.",'narrate');
-        addLog("Three shapes drift toward you. Void Wraiths — remnants of crew who stayed too long in the dark.",'narrate');
+        addLog("A sign reads THE TRANSIT CORRIDORS in official lettering. Whoever named it was being extremely generous. The lights work on a schedule known only to themselves.",'narrate');
+        addLog("Three shapes drift toward you. Void Wraiths — remnants of crew who stayed too long in the dark. The survivors, you gather, call this stretch the Wraith Corridors. The survivors are right.",'narrate');
         addLog('"Hello," says Mr. Ruffle Feathers, out of habit.','ruffle');
         addLog("They do not say hello back.",'narrate');
       } else {
-        addLog("The Wraith Corridors. You have been here before. It did not go especially well.",'narrate');
+        addLog("The Transit Corridors — the Wraith Corridors, if you're being honest. You have been here before. It did not go especially well.",'narrate');
       }
     },
     actions(){
@@ -3463,29 +3508,49 @@ const LOCATIONS = {
         btns.push({label:n>1?'⚔ Fight the Wraiths':'⚔ Fight the Patrol Wraith',fn:()=>wraith1Fight(),cls:'danger'});
         btns.push({label:n>1?'🎭 Attempt to Slip Past':'🎭 Attempt to Outwit It',fn:()=>wraith1Outwit()});
       }
-      if(G.flags.wraith1Done)btns.push({label:'🚀 Board the Coop 69',fn:()=>travelTo('coop69')});
-      btns.push({label:'← Retreat to the Docking Bay',fn:()=>travelTo('docking')});
+      if(G.flags.wraith1Done)btns.push({label:'🚀 Proceed to the Pigeonholes',fn:()=>travelTo('pigeonholes')});
+      btns.push({label:'← Retreat to the Sorting Roost',fn:()=>travelTo('docking')});
       return {context:'Darkness presses in. Something moves.',buttons:[...btns]};
     }
   },
 
   docking:{
-    id:'docking',name:'Docking Bay',artKey:'docking',
+    id:'docking',name:'The Sorting Roost',artKey:'docking',
     onEnter(){
       if(!G.flags.dockingVisited){
         G.flags.dockingVisited=true;
-        addLog("The Docking Bay receiving area: crates of undelivered mail, a cold cup of something, a hand-lettered sign reading PASSES READY. Beyond a dim service corridor you can just make out the Coop 69 in its berth, engines cold.",'narrate');
-        addLog("It is a small, battered shuttle with a name painted on the hull in letters that are slightly too large for the available space.",'narrate');
-        addLog('"I named it," Mr. Ruffle Feathers says. He does not elaborate. He clearly does not remember doing this.','ruffle');
+        addLog("The Sorting Roost: the station's mail front-office. Crates of undelivered post, a cold cup of something, and a brass sign reading AVIAN MAIL PROCESSING — PASSES READY. A Security Pigeon guards a dim corridor leading deeper in.",'narrate');
+        addLog("Beyond it, you're told, are the Pigeonholes — where the sorted things end up. Including, apparently, shuttles.",'narrate');
+        addLog('"A mail room," says Mr. Ruffle Feathers. "Of course the way to save the universe runs through a mail room."','ruffle');
       } else {
-        addLog("The Docking Bay receiving area. The mail waits. The Coop 69 waits, further in, with quiet dignity.",'narrate');
+        addLog("The Sorting Roost. Mail, unbothered. The Security Pigeon guards the corridor on, ever vigilant.",'narrate');
       }
     },
     actions(){
       const btns=[
-        {label:'💀 Enter the Wraith Corridors',fn:()=>securityPigeon(),cls:'danger'},
+        {label:'💀 Enter the Transit Corridors',fn:()=>securityPigeon(),cls:'danger'},
       ];
-      return {context:'The mail waits, unbothered. The Coop 69 waits, further in.',buttons:[...btns]};
+      return {context:'The mail waits, unbothered. Somewhere past the corridor, the Pigeonholes.',buttons:[...btns]};
+    }
+  },
+
+  pigeonholes:{
+    id:'pigeonholes',name:'The Pigeonholes',artKey:'docking',
+    onEnter(){
+      if(!G.flags.pigeonholesVisited){
+        G.flags.pigeonholesVisited=true;
+        addLog("The Pigeonholes: a vast wall of berths, each a slot the exact shape of something that has no business being filed. The Coop 69 sits in one of them, engines cold.",'narrate');
+        addLog("Every berth has a sorting code stencilled above it. The Coop 69's is too. Mr. Ruffle Feathers reads it, then his ship, then the code again.",'narrate');
+        addLog('"My shuttle," he says slowly, "has been filed."','ruffle');
+      } else {
+        addLog("The Pigeonholes. The Coop 69 waits in its slot, patient as undelivered mail.",'narrate');
+      }
+    },
+    actions(){
+      return {context:'Berths line the walls. One of them is yours.',buttons:[
+        {label:'🚀 Board the Coop 69',fn:()=>travelTo('coop69'),cls:'magic'},
+        {label:'← Back to the Transit Corridors',fn:()=>travelTo('corridors')},
+      ]};
     }
   },
 
@@ -3512,7 +3577,7 @@ const LOCATIONS = {
         G.flags.crackedMirrorFound&&!G.flags.crackedMirrorUsed?{label:'🪞 Use the Cracked Mirror',fn:()=>useCrackedMirror(),cls:'magic'}:null,
         G.flags.hollowStarVisited
           ? {label:'← Return to Hollow Star',fn:()=>travelTo('hollow_star')}
-          : {label:'← Return to Docking Bay',fn:()=>travelTo('docking')},
+          : {label:'← Return to the Pigeonholes',fn:()=>travelTo('pigeonholes')},
       ];
       return {context:'The control panel awaits your input.',buttons:btns.filter(Boolean)};
     }
@@ -3628,7 +3693,7 @@ function openLift(){
         ? `<div class="lift-room here">${nm} <span class="lift-tag">you are here</span></div>`
         : `<div class="lift-room" data-r="${r}">→ ${nm}</div>`;
     });
-    if(isCommerce && !G.flags.docksCleared) html+='<div class="lift-room closed" id="lift-docks">🔒 The Docks <span class="lift-tag">restricted</span></div>';
+    if(isCommerce && !G.flags.docksCleared) html+='<div class="lift-room closed" id="lift-docks">🔒 The Sorting Roost <span class="lift-tag">restricted</span></div>';
     if(isCommerce) html+='<div class="lift-room closed" id="lift-dining">✕ Dining Hall <span class="lift-tag">closed</span></div>';
   });
   html+='<div class="lift-status" id="lift-status"></div>';
@@ -3638,21 +3703,22 @@ function openLift(){
     el.onclick=()=>{const r=el.dataset.r;closeMG();travelTo(r);};
   });
   const docks=document.getElementById('lift-docks');
-  if(docks)docks.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='The Docks — RESTRICTED. Mail and cargo only. The Dockmaster requires authorisation you do not currently possess. (The Oracle issues dock passes, apparently. Take it up with the Oracle.)';};
+  if(docks)docks.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='The Sorting Roost — RESTRICTED. Avian Mail Processing only. Requires a Pigeonhole Pass you do not currently possess. (The Oracle issues them, apparently. Take it up with the Oracle.)';};
   const dining=document.getElementById('lift-dining');
   if(dining)dining.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='Dining Hall — CLOSED FOLLOWING AN INCIDENT. No further detail is offered. The faint smell offers some, unprompted. Mr. Ruffle Feathers elects not to investigate, for once in his life.';};
   const cl=document.getElementById('lift-close-btn');if(cl)cl.onclick=()=>closeMG();
 }
 function securityPigeon(){
-  if(G.flags.dovecoteDone){
-    addLog("The security pigeon examines your dock pass at length. \"'CHOSEN BIRD — PROVISIONAL.' Provisional. Marvellous.\" It checks the Dovecote’s mark on your feather, nods once, and steps aside.",'speech');
-    addLog('"Cleared. Mind the wraiths. And the mail. Mostly the wraiths." A pause. "Genuinely. I\'ve seen the footage."','speech');
-    setTimeout(()=>travelTo('corridors'),500);
-    return;
-  }
+  const hasPass=hasItem('dockpass');
   showModal('🦺','Station Security',
-    'A pigeon in a high-visibility tabard steps forward. "Halt. This area is, ah, restricted. Very haunted. Lot of wraiths." He checks a clipboard that is, you note, completely blank. "Do you have clearance?"',
+    'A pigeon in a high-visibility tabard steps forward. "Halt. This area is, ah, restricted. Very haunted. Lot of wraiths." He checks a clipboard that is, you note, completely blank. "Pigeonhole Pass?"',
     [
+      {label:'🎫 Present the Pigeonhole Pass',disabled:!hasPass,fn:()=>{
+        closeModal();
+        addLog("The Security Pigeon examines your Pigeonhole Pass at length. \"'CHOSEN BIRD — PROVISIONAL.' Provisional. Marvellous.\" He nods once and steps aside.",'speech');
+        addLog('"Cleared. Mind the wraiths. And the mail. Mostly the wraiths." A pause. "Genuinely. I\'ve seen the footage."','speech');
+        setTimeout(()=>travelTo('corridors'),500);
+      }},
       {label:'"No, not yet."',fn:()=>{closeModal();addLog('"Right. Then I must firmly — and I cannot stress this enough — suggest you don\'t. I won\'t physically stop you. I\'m not contractually obliged to. But I\'d feel better."','speech');setActions();}},
       {label:'Push past anyway →',fn:()=>{closeModal();addLog('You step past him into the dark. He sighs the sigh of a bird who will now have to fill in a form about this.','narrate');setTimeout(()=>travelTo('corridors'),400);}},
     ]
@@ -3801,7 +3867,7 @@ const LORE_BOOKS = [
     author:'Archivist Pelum, Vol. 11',
     lines:[
       '"Wraith outbreaks are not new. The Archive records them arriving in waves — every few decades, sometimes longer — lingering, then receding. The official classification is \'a recurring inconvenience,\' which undersells matters considerably."',
-      '"This wave is recent. A few weeks, no more. Until then the Wraith Corridors were an ordinary thoroughfare — deliveries came through the Docking Bay daily. Then the dark thickened, the crew who lingered stopped returning, and the supply runs stopped with them."',
+      '"This wave is recent. A few weeks, no more. Until then the Transit Corridors were an ordinary thoroughfare — deliveries came through the Pigeonholes daily. Then the dark thickened, the crew who lingered stopped returning, and the supply runs stopped with them."',
       '"Every recorded outbreak aligns with a stirring of the Hollow Star. The Archive lists this as coincidence. The Archive is, on this single point, almost certainly lying to itself."',
       '"Footnote 11(b): a side effect noted across several outbreaks — the Great Experiment left certain pigeons with an involuntary bowel response under acute distress. Wraiths constitute acute distress. The Dining Hall closure is, the Archive suspects, a related matter. No one has volunteered details."',
       '"Why pigeons?" Mr. Ruffle Feathers asks, in the voice of a bird bracing for an answer about himself.',
@@ -4007,7 +4073,7 @@ function clearDocks(){
   G.flags.docksCleared=true;
   setTimeout(()=>{
     addLog('Then — somewhere beneath the altar — a mechanical whirr, a chunk, and the unmistakable sound of a label printer.','narrate');
-    addLog('A laminated card slides out, faintly warm. The Oracle nudges it toward you with one ancient talon. "The Docks will now admit you. Mind the mail."','speech');
+    addLog('A laminated card slides out, faintly warm. The Oracle nudges it toward you with one ancient talon. "The Pigeonholes will now admit you. Mind the mail."','speech');
     addLog('"Why," says Mr. Ruffle Feathers, "does a temple have a label printer?" The Oracle does not answer. The Oracle never answers the useful questions.','ruffle');
     giveItem('dockpass');setActions();
   },700);
@@ -4060,8 +4126,8 @@ function martaShop(){
   const greeting=angry
     ? `Ruffle. I see you have the nerve to come back. Fine. I'll sell to you. But prices reflect my feelings about the fire.`
     : discount
-    ? `Ruffle! Your silver tongue gets you a deal today — I've got ${[inkAvail?`🖋 Void Ink (${inkPrice}g)`:null,potAvail?`⚗️ Healing Draught (${potPrice}g)`:null].filter(Boolean).join(', ')}.`
-    : `Ruffle! ${[inkAvail?`🖋 Void Ink (${inkPrice}g)`:null,potAvail?`⚗️ Healing Draught (${potPrice}g)`:null].filter(Boolean).join(', ') || "Stock's thin today."}`;
+    ? `Ruffle! Your silver tongue gets you a deal today — I've got ${[inkAvail?`🖋 Void Ink (${inkPrice}s)`:null,potAvail?`⚗️ Healing Draught (${potPrice}s)`:null].filter(Boolean).join(', ')}.`
+    : `Ruffle! ${[inkAvail?`🖋 Void Ink (${inkPrice}s)`:null,potAvail?`⚗️ Healing Draught (${potPrice}s)`:null].filter(Boolean).join(', ') || "Stock's thin today."}`;
   showDlg(NPCS.marta, greeting, [
     angry?{text:'"I\'m sorry about the fire." (Charm check)',fn:()=>{
       rollDice('Apologise to Marta','charm',12,(o)=>{
@@ -4077,11 +4143,12 @@ function martaShop(){
       });
     }}:null,
     inkAvail&&G.gold>=inkPrice?{text:`Buy Void Ink (${inkPrice} Shinies)`,fn:()=>{G.flags.martaSoldInk=true;spendSh(inkPrice);giveItem('ink');updateHUD();addLog('Marta hands over the Void Ink.','narrate');martaShop()}}:null,
-    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}🔩) — can't afford`,fn:()=>{}}:null,
+    inkAvail&&G.gold<inkPrice?{text:`Void Ink (${inkPrice}s) — can't afford`,fn:()=>{}}:null,
     potAvail&&G.gold>=potPrice?{text:`Buy Healing Draught (${potPrice} Shinies)`,fn:()=>{G.flags.martaSoldPotion=true;spendSh(potPrice);giveItem('potion');updateHUD();addLog('Marta tucks a potion into your wing.','narrate');martaShop()}}:null,
-    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}🔩) — can't afford`,fn:()=>{}}:null,
+    potAvail&&G.gold<potPrice?{text:`Healing Draught (${potPrice}s) — can't afford`,fn:()=>{}}:null,
     hasItem('coin')?{text:'Show the Ancient Coin',fn:()=>martaCoin()}:null,
-    !hasItem('snack')&&!G.flags.martaSoldSnack?{text:`Buy Space Sardines (${angry?6:3} Shinies)`,fn:()=>{const p=angry?6:3;if(G.gold<p){addLog("Can't afford it.",'system');setTimeout(()=>martaShop(),600);return}G.flags.martaSoldSnack=true;spendSh(p);giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
+    !hasItem('snack')&&!G.flags.martaSoldSnack&&G.gold>=(angry?6:3)?{text:`Buy Space Sardines (${angry?6:3} Shinies)`,fn:()=>{const p=angry?6:3;G.flags.martaSoldSnack=true;spendSh(p);giveItem('snack');updateHUD();addLog('Marta produces a tin of sardines from somewhere unspeakable.','narrate');martaShop()}}:null,
+    !hasItem('snack')&&!G.flags.martaSoldSnack&&G.gold<(angry?6:3)?{text:`Space Sardines (${angry?6:3}s) — can't afford`,fn:()=>{}}:null,
     !G.flags.basementHinted?{text:'"What\'s happening on the station?"',fn:()=>martaGossip()}:null,
     G.flags.basementHinted?{text:'"Anything else going on?"',fn:()=>martaGossip()}:null,
     G.lostFound&&G.lostFound.length?{text:`🧲 Lost & Found (${G.lostFound.length})`,fn:()=>martaLostFound()}:null,
@@ -4090,10 +4157,27 @@ function martaShop(){
 }
 function martaLostFound(){
   G.lostFound = G.lostFound || [];
-  if(!G.lostFound.length){showDlg(NPCS.marta,'"Chest\'s empty. Nothing of yours floating about today. A single sock orbits past, judgmentally."',[{text:'← Back',fn:()=>martaShop()}]);return}
+  const hasDenied = (G.flags.deniedCoins||0) > 0;
+  if(!G.lostFound.length && !hasDenied){showDlg(NPCS.marta,'"Chest\'s empty. Nothing of yours floating about today. A single sock orbits past, judgmentally."',[{text:'← Back',fn:()=>martaShop()}]);return}
   const choices=G.lostFound.map((it,idx)=>({text:`Reclaim ${it.icon} ${it.name}`,fn:()=>reclaimLost(idx)}));
+  if(hasDenied)choices.push({text:'"You have my coin, Marta." (Charm — hard)',fn:()=>demandCoin()});
   choices.push({text:'← Back',fn:()=>martaShop()});
   showDlg(NPCS.marta,'"Ah — lost something?" Marta gestures at a slowly rotating heap behind her, held together by the station\'s own magnet. "Funny how it all ends up here. Funny how it\'s mine now. Anyway."',choices);
+}
+function demandCoin(){
+  rollDice('Accuse Marta','charm',16,(o)=>{
+    if(o==='crit'||o==='success'){
+      addLog('Marta\'s composure cracks. "...Fine. It\'s a very nice coin."','speech');
+      if(G.gold<50){addLog('"Fifty Shinies and it\'s yours. Non-negotiable. Come back when you can pay."','speech');setTimeout(()=>martaLostFound(),800);return}
+      if(G.inv.indexOf(null)===-1){addLog('"...You\'ve nowhere to put it anyway. It stays with me. Pity."','speech');setTimeout(()=>martaLostFound(),800);return}
+      spendSh(50);G.flags.deniedCoins--;giveItem('coin');
+      addLog('"Fifty. And I want you to know this is costing me more than it\'s costing you." She slides the coin over, not looking at it. She is absolutely looking at it.','speech');
+      setTimeout(()=>martaLostFound(),900);
+    } else {
+      addLog('"I have no idea what you\'re talking about," Marta says, with the serene confidence of a creature physically incapable of returning something shiny.','speech');
+      setTimeout(()=>martaLostFound(),800);
+    }
+  });
 }
 function reclaimLost(idx){
   const it=G.lostFound[idx]; if(!it) return;
@@ -4119,12 +4203,21 @@ function finishReclaim(idx){
   setTimeout(()=>martaLostFound(),900);
 }
 function martaCoin(){
-  addLog('"Oh! This is from the Before-Time. Worth twenty-five Shinies. Easily."','speech');
-  removeItem('coin');G.gold+=25;updateHUD();addLog('Marta counts out 25 Shinies.','good');addScore(20);G.flags.soldCoin=true;
-  setTimeout(()=>martaShop(),600);
+  const count=G.inv.filter(i=>i&&i.id==='coin').length;
+  if(count===0){martaShop();return}
+  const opts=[{text:`Sell one (25 Shinies)`,fn:()=>sellCoins(1)}];
+  if(count>1)opts.push({text:`Sell all ${count} (${count*25} Shinies)`,fn:()=>sellCoins(count)});
+  opts.push({text:'← Keep them',fn:()=>martaShop()});
+  showDlg(NPCS.marta,`"Oh! ${count>1?'These are':'This is'} from the Before-Time. Worth twenty-five Shinies each. Easily." Her eyes do a small, greedy thing.`,opts);
+}
+function sellCoins(num){
+  for(let i=0;i<num;i++)removeItem('coin');
+  const total=num*25;G.gold+=total;updateHUD();
+  addLog(`Marta counts out ${total} Shinies${num>1?` (${num} coins, 25 each)`:''}.`,'good');addScore(20*num);G.flags.soldCoin=true;
+  setTimeout(()=>martaShop(),700);
 }
 function martaGossip(){
-  addLog('"Wraiths have been thicker in the corridors all week," Marta says, lowering three of her voices. "The Docks are just down on this deck — mail side. Locked, mind. You\'ll want a pass off the Oracle before the Dockmaster lets you near a shuttle."','speech');
+  addLog('"Wraiths have been thicker in the Transit Corridors all week," Marta says, lowering three of her voices. "The Sorting Roost\'s just down on this deck — mail side. Locked, mind. You\'ll want a Pigeonhole Pass off the Oracle before the Security Pigeon lets you past."','speech');
   addScore(15);G.flags.keyHintGiven=true;
   if(!G.flags.basementHinted){
     G.flags.basementHinted=true;
@@ -4465,7 +4558,7 @@ function fightFluffinator(){
 function returnToStation(){
   addLog('"Right. Back to the station." Mr. Ruffle Feathers plots the return course carefully. Very carefully.','ruffle');
   runFlight(
-    ()=>{SFX.launch();addLog('The Coop 69 engines fire. Course confirmed. The station grows in the viewport.','good');travelTo('docking')},
+    ()=>{SFX.launch();addLog('The Coop 69 engines fire. Course confirmed. The station grows in the viewport.','good');travelTo('pigeonholes')},
     (wrongCount)=>{
       addLog('"I did it again," Mr. Ruffle Feathers says. He sounds tired.','ruffle');
       asteroidBeltDetour();
@@ -4521,7 +4614,7 @@ function asteroidBeltDetour(noChart=false){
         // No chart — even surviving sends back to dock
         addLog('You navigate clear, but without coordinates you have no idea where to go.','narrate');
         addLog('"Speak to the Archivist first," the navigation system suggests, diplomatically.','system');
-        travelTo('docking');return;
+        travelTo('pigeonholes');return;
       }
       const dmg = G._podDamage || 0;
       addLog('You navigate the Coop 69 clear of the asteroid field.','good');
@@ -4555,10 +4648,10 @@ function asteroidBeltDetour(noChart=false){
         setTimeout(()=>addLog('"Thank you," he says quietly, to a viewport full of stars.','ruffle'),11000);
         setTimeout(()=>{addScore(80);G.flags.hollowStarVisited=true;travelTo('hollow_star')},12500);
       } else {
-        addLog('The Coop 69 takes significant damage and limps back to the Docking Bay on emergency thrusters.','bad');loseHp(8);
+        addLog('The Coop 69 takes significant damage and limps back to the Pigeonholes on emergency thrusters.','bad');loseHp(8);
         addLog('"The coordinates were ambiguous," Mr. Ruffle Feathers says, for the record.','ruffle');
         if(!G.flags.blubberstiltskinFriend) addLog('A thought: if something large were to nudge the ship clear... something in the basement, perhaps...','system');
-        travelTo('docking');
+        travelTo('pigeonholes');
       }
     }
   );
@@ -4682,7 +4775,7 @@ function nemesisEncounter(){
       {label:'🚁 Brace for Impact',fn:()=>startKeithCombat(),cls:'danger'},
       {label:'🏃 Full Retreat',fn:()=>{
         addLog('"RUNNING BEFORE WE\'VE EVEN STARTED, RUMBLE DUMP?" Keith broadcasts.','speech');
-        loseHp(3);G.flags.nemesisEncountered=false;travelTo('docking');
+        loseHp(3);G.flags.nemesisEncountered=false;travelTo('pigeonholes');
       }},
     ]
   });
@@ -4706,12 +4799,12 @@ function startKeithCombat(){
   window._keithOnLose = (r)=>{
     if(r==='fled'){
       addLog('"RUNNING AWAY, RUMBLE DUMP?" Keith broadcasts gleefully.','speech');
-      loseHp(5);travelTo('docking');
+      loseHp(5);travelTo('pigeonholes');
     } else {
       addLog('"Ha!" says Keith. "HA!"','speech');
-      addLog('The Coop 69 is disabled. Mr. Ruffle Feathers drifts back to the docking bay.','bad');
+      addLog('The Coop 69 is disabled. Mr. Ruffle Feathers drifts back to the Pigeonholes.','bad');
       loseHp(8);G.flags.nemesisEncountered=false;
-      travelTo('docking');
+      travelTo('pigeonholes');
     }
   };
 
@@ -4745,6 +4838,7 @@ function showSpaceCombat(enemy, onWin, onLose){
   // Update combat title for space mode
   const title=overlay.querySelector('.combat-title');
   if(title)title.textContent='🚁 Space Combat 👾';
+  {const _pi=document.getElementById('c-player-icon');if(_pi)_pi.textContent='🚁';}
 
   overlay.classList.add('active');
   const gear=document.getElementById('settings-gear');if(gear)gear.style.display='none';
@@ -4800,7 +4894,6 @@ function showSpaceCombat(enemy, onWin, onLose){
       {l:'🛡 Shield',a:'shield'},
       {l:'🔧 Nano Repair',a:'repair'},
       {l:'🏃 Flee',a:'flee',cls:'danger'},
-      ...(mainUsed&&!bonusUsed?[{l:'⏭ End Turn',a:'endturn'}]:[]),
     ].forEach(b=>{
       const btn=document.createElement('button');btn.className='act-btn '+(b.cls||'');
       btn.textContent=b.l;btn.disabled=mainUsed;
@@ -4824,6 +4917,9 @@ function showSpaceCombat(enemy, onWin, onLose){
     });
     rightWrap.appendChild(rightCol);
     actions.appendChild(leftWrap);actions.appendChild(rightWrap);
+    const scEnd=document.createElement('button');scEnd.className='act-btn';scEnd.textContent='⏭ End Turn';
+    scEnd.style.gridColumn='1/-1';scEnd.disabled=!mainUsed||bonusUsed;
+    scEnd.onclick=()=>doSC('endturn','main');actions.appendChild(scEnd);
     if(canCannon && !cannonHinted){cannonHinted=true; scLog('💥 Hull critical — Mega Cannon comes online!');}
   }
 
