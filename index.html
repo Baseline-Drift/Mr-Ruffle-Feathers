@@ -616,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C27</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C28</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1145,13 +1145,14 @@ function calcTitleBase(stats){
 
 function calcPigeonAffix(){
   if(!G) return '';
-  const t=G.toiletCount||0, f=G.flapCount||0, c=G.cooCount||0;
-  const total=t+f+c;
+  const t=G.toiletCount||0, f=G.flapCount||0, c=G.cooCount||0, b=G.breadcrumbCount||0;
+  const total=t+f+c+b;
   if(total<10) return '';
   // One behaviour dominating 60%+ of the total earns a "Sirrah" title
   if(t/total>=0.6) return ', Sirrah Poopsalot';
   if(c/total>=0.6) return ', Sirrah Coosington';
   if(f/total>=0.6) return ', Sirrah Flappingham';
+  if(b/total>=0.6) return ', Sirrah Crumbsworth';
   // Otherwise a well-rounded degenerate climbs the Pigeon ladder
   let p;
   if(total>=200) p='A Menace, Frankly';
@@ -1188,6 +1189,7 @@ function initGame(){
     toiletCount:0,
     flapCount:0,
     cooCount:0,
+    breadcrumbCount:0,
     visited:{nest:true},
     bonusPoints:0,
     titleName:'',
@@ -1437,6 +1439,40 @@ function playCombatMusic(){
         osc.type='sawtooth';osc.frequency.value=freq;
         g.gain.setValueAtTime(0.06,startT);
         g.gain.exponentialRampToValueAtTime(0.001,startT+dur*0.8);
+        osc.start(startT);osc.stop(startT+dur);
+        startT+=dur;
+      });
+    }
+    scheduleLoop(ctx.currentTime+0.05);
+    musicInterval=setInterval(()=>{
+      if(musicGeneration!==gen){clearInterval(musicInterval);musicInterval=null;return}
+      if(!musicEnabled){clearInterval(musicInterval);musicInterval=null;return}
+      scheduleLoop(ctx.currentTime+0.05);
+    },loopDur*1000);
+  }catch(e){}
+}
+
+function playEndingMusic(){
+  if(!musicEnabled)return;
+  stopMusic();
+  const gen = ++musicGeneration;
+  try{
+    const ctx=getAudio();
+    const theme=[
+      [392,0.4],[440,0.2],[494,0.4],[440,0.2],
+      [392,0.4],[330,0.4],[349,0.7],
+      [294,0.4],[330,0.2],[349,0.4],[392,0.7],
+      [349,0.3],[330,0.3],[294,0.4],[262,0.9],
+    ];
+    const loopDur=theme.reduce((a,b)=>a+b[1],0);
+    function scheduleLoop(startT){
+      if(musicGeneration!==gen)return;
+      theme.forEach(([freq,dur])=>{
+        const osc=ctx.createOscillator();const g=ctx.createGain();
+        osc.connect(g);g.connect(getMaster());
+        osc.type='triangle';osc.frequency.value=freq;
+        g.gain.setValueAtTime(0.05,startT);
+        g.gain.exponentialRampToValueAtTime(0.001,startT+dur*0.9);
         osc.start(startT);osc.stop(startT+dur);
         startT+=dur;
       });
@@ -2274,6 +2310,8 @@ const NPCS={
   wraith:{icon:'🗡️',name:'Wraith Captain',title:'Commander of the Void Remnants'},
   fluffinator:{icon:'🐱',name:'Mrs Fluffinator The Unbrushable'},
   keeper:{icon:'🫥',name:'The Void Keeper',title:'Ancient Guardian of the Vault'},
+  guard:{icon:'🦺',name:'The Security Pigeon',title:'Sworn to the Threshold (Indifferently)'},
+  oldbird:{icon:'🕊️',name:'Old Bird Pigeon',title:'Watcher of the Berths'},
 };
 
 // ============================================================
@@ -2658,6 +2696,7 @@ function renderBirdTab(){
       <div class="bcount"><div class="bcount-v">${G.toiletCount||0}</div><div class="bcount-l">🚽 VISITS</div></div>
       <div class="bcount"><div class="bcount-v">${G.flapCount||0}</div><div class="bcount-l">🪶 FLAPS</div></div>
       <div class="bcount"><div class="bcount-v">${G.cooCount||0}</div><div class="bcount-l">🕊 COOS</div></div>
+      <div class="bcount"><div class="bcount-v">${G.breadcrumbCount||0}</div><div class="bcount-l">🍞 CRUMBS</div></div>
       <div class="bcount"><div class="bcount-v">${G.score||0}</div><div class="bcount-l">⭐ SCORE</div></div>
     </div>
     <button class="mirror-link-btn" onclick="closeCharScreen();${inNest?'openMirror()':''}" ${inNest?'':'disabled'}>${inNest?'🪞 Visit the Mirror':'🪞 Mirror available in The Nest only'}</button>
@@ -3139,12 +3178,30 @@ function runFlight(onSuccess, onFail){
 // LOCATIONS
 // ============================================================
 // Universal look/fire buttons appended to every location
+function primalPeck(){
+  const lines=[
+    '"As I was saying — the fundamental nature of the Hollow Star—" He stops. There are crumbs. He pecks one. "—is a serious matter." He pecks another.',
+    'Mr. Ruffle Feathers notices the breadcrumbs a fraction of a second before his body does. His body wins. *peck.*',
+    '"I am a person," he mutters, pecking. "I have a name. I have read books." *peck.* "This means nothing."',
+    'He pecks before he can stop himself, then glances around to see if anyone noticed. Someone always notices. The someone is you.',
+    'Some circuit older than language takes the wheel. *peck, peck, peck.* "...We will never speak of this," he tells the crumbs.',
+    'A lifetime of hard-won dignity yields, instantly and without negotiation, to a single stale crumb. *peck.*',
+  ];
+  const i=(G.breadcrumbCount||0)%lines.length;
+  addLog(lines[i],'ruffle');
+  G.breadcrumbCount=(G.breadcrumbCount||0)+1;
+  if((G.breadcrumbCount===1))addLog('🍞 Breadcrumbs pecked: 1. (The Avian Bureaucracy does not record this. It records everything. It has chosen not to record this.)','system');
+}
+
 function universalActions(){
-  return [
+  const acts=[
     {label:'🔍 Look Around', fn:()=>lookAround()},
     {label:'🔥 Set Something on Fire', fn:()=>useLighter()},
     {label:'🪶 Flap Wings', fn:()=>flapWings()},
   ];
+  const crumbRooms=['nest','market','docking','coop69','basement','facilities'];
+  if(G.loc&&crumbRooms.includes(G.loc.id)) acts.push({label:'🍞 Peck at the Ground', fn:()=>primalPeck(), tab:'look'});
+  return acts;
 }
 
 function flapWings(){
@@ -3360,6 +3417,8 @@ function lookAround(){
   };
   if(LOOK[loc]) LOOK[loc]();
   else addLog('"You look around. There is a lot to take in."','ruffle');
+  const crumbRooms=['nest','market','docking','coop69','basement','facilities'];
+  if(crumbRooms.includes(loc)&&Math.random()<0.3) setTimeout(()=>primalPeck(),800);
 }
 
 const LOCATIONS = {
@@ -3465,6 +3524,7 @@ const LOCATIONS = {
     },
     actions(){
       const btns=[];
+      btns.push({label:'🗣 Consult the Oracle',fn:()=>consultOracle()});
       if(!G.flags.dovecoteSeal){
         btns.push({label:'📐 Approach the Altar Seal',fn:()=>{
           if(G.flags.markedMade)dovecoteSeal();
@@ -3528,6 +3588,7 @@ const LOCATIONS = {
     },
     actions(){
       const btns=[
+        {label:'🗣 Talk to the Security Pigeon',fn:()=>securityPigeonTalk()},
         {label:'💀 Enter the Transit Corridors',fn:()=>securityPigeon(),cls:'danger'},
       ];
       return {context:'The mail waits, unbothered. Somewhere past the corridor, the Pigeonholes.',buttons:[...btns]};
@@ -3542,12 +3603,14 @@ const LOCATIONS = {
         addLog("The Pigeonholes: a vast wall of berths, each a slot the exact shape of something that has no business being filed. The Coop 69 sits in one of them, engines cold.",'narrate');
         addLog("Every berth has a sorting code stencilled above it. The Coop 69's is too. Mr. Ruffle Feathers reads it, then his ship, then the code again.",'narrate');
         addLog('"My shuttle," he says slowly, "has been filed."','ruffle');
+        addLog('An old pigeon sits by the bay doors, watching asteroids drift past with the air of someone who has watched a great many asteroids drift past.','narrate');
       } else {
         addLog("The Pigeonholes. The Coop 69 waits in its slot, patient as undelivered mail.",'narrate');
       }
     },
     actions(){
-      return {context:'Berths line the walls. One of them is yours.',buttons:[
+      return {context:'Berths line the walls. One of them is yours. An old pigeon watches the bay doors.',buttons:[
+        {label:'🗣 Talk to Old Bird Pigeon',fn:()=>oldBirdTalk()},
         {label:'🚀 Board the Coop 69',fn:()=>travelTo('coop69'),cls:'magic'},
         {label:'← Back to the Transit Corridors',fn:()=>travelTo('corridors')},
       ]};
@@ -3663,6 +3726,7 @@ const LOCATIONS = {
         {label:'📖 Browse the Stacks',fn:()=>browseLibrary()},
         {label:'📜 Read Library Volumes',tab:'act',fn:()=>showLibraryBooks()},
       ];
+      if(G.flags.felidaeHint&&!G.flags.felidaeChartFound)btns.push({label:'🔍 Find Old Bird Pigeon\'s Note',fn:()=>findFelidaeNote(),tab:'look'});
       return {context:'Ancient knowledge hums in the walls.',buttons:btns};
     }
   },
@@ -3732,16 +3796,6 @@ function browseLibrary(){
       addLog('Deep in the stacks — a volume titled "Emergency Protocols for the Chosen Bird: Volume III."','good');
       addLog('It assumes you\'ve read Volumes I and II. You have not. It does contain one useful page: a hand-drawn map of the Hollow Star\'s containment shell. +1 Wit.','magic');
       earnBonus('wit',1);addScore(30);
-      if(!G.flags.felidaeChartFound){
-        G.flags.felidaeChartFound=true;
-        setTimeout(()=>{
-          addLog('And behind this volume — a much older chart. The system is labelled in faded ink: FELIDAE.','narrate');
-          addLog('Below the name, a warning stamp: "DO NOT VISIT — Avian Advisory Level: EXTREME."','system');
-          addLog('"Interesting," says Mr. Ruffle Feathers, pocketing it immediately.','ruffle');
-          G._felidaeCoords={x:Math.floor(Math.random()*8)+1,y:Math.floor(Math.random()*8)+1,z:Math.floor(Math.random()*8)+1};
-          addLog(`🗺️ Felidae coordinates noted: X-${G._felidaeCoords.x} · Y-${G._felidaeCoords.y} · Z-${G._felidaeCoords.z}`,'magic');
-        },1000);
-      }
     } else if(outcome==='success'){
       addLog('You find a slim volume: "What To Expect When You\'re Expecting A Prophecy." It is unhelpfully vague but oddly comforting.','good');
       addLog('"Someone prepared for this," Mr. Ruffle Feathers says. "That\'s either reassuring or deeply worrying."','ruffle');
@@ -4068,6 +4122,73 @@ function vexisCharmCheck(){
     }
   });
 }
+function securityPigeonTalk(){
+  const lines=[
+    '"Mail\'s late," he says, before you can speak. "Mail\'s always late. I don\'t make the mail. I stand near it."',
+    '"Saving the universe? Sure." He does not look up. "Mind the wraiths. Or don\'t. I\'m not your supervisor."',
+    '"You can stand there as long as you like. I\'ve stood here eleven years. You won\'t out-stand me."',
+    '"I\'ve seen the footage of those corridors. I\'m not going in. You go in. That\'s the arrangement."',
+  ];
+  const i=(G.flags._guardLine||0)%lines.length;G.flags._guardLine=(G.flags._guardLine||0)+1;
+  showDlg(NPCS.guard,lines[i],[{text:'← Leave him to it',fn:()=>closeDlg()}]);
+}
+
+function consultOracle(){
+  const riddles=[
+    '"What is hollow is not empty," the Oracle intones. "What is empty does not hunger. Mind the difference — it will mind you."',
+    '"The bird that arrives last is the bird that was always going to arrive. This is not comforting. It was not meant to be."',
+    '"A door you have not opened is already closing. Hurry slowly."',
+    '"You ask the way forward. The way forward asks for you. You are, in this, even."',
+    '"Three things are certain," says the Oracle. "The Star, the Choice, and the mail. I decline to rank them."',
+  ];
+  const i=(G.flags._oracleLine||0)%riddles.length;G.flags._oracleLine=(G.flags._oracleLine||0)+1;
+  showDlg(NPCS.vexis,riddles[i],[
+    {text:'"...Could you be less cryptic?"',fn:()=>{closeDlg();addLog('The eye blinks, slowly, in a way that is almost certainly a no.','narrate');}},
+    {text:'← Step back from the altar',fn:()=>closeDlg()},
+  ]);
+}
+
+function oldBirdTalk(){
+  if(G.flags.felidaeHint){
+    showDlg(NPCS.oldbird,'"Still here, then. Storm\'s no better." He nods at the berths. "That note\'s in the Library, like I said. The cat book. Mind how you go."',[{text:'← Leave him to the storm',fn:()=>closeDlg()}]);
+    return;
+  }
+  showDlg(NPCS.oldbird,
+    '"Storm\'s bad today," says Old Bird Pigeon, not looking up from the berths. "Asteroid storm. Always is, this time of cycle. You\'ll want your coordinates right. Wrong coordinates in a storm — they don\'t find all of you."',
+    [
+      {text:'"Know any routes worth flying?" (Charm)',fn:()=>oldBirdCharm()},
+      {text:'"What do you watch for out here?"',fn:()=>{showDlg(NPCS.oldbird,'"Berths. Ships in, ships out, mostly. You file \'em right, they file you back. You file \'em wrong…" He trails off, watching a rock the size of a chapel drift past the bay doors.',[{text:'← Step back',fn:()=>oldBirdTalk()}]);}},
+      {text:'← Leave him to the storm',fn:()=>closeDlg()},
+    ]
+  );
+}
+function oldBirdCharm(){
+  closeDlg();
+  rollDice('Win Old Bird Pigeon\'s Trust','charm',14,(o)=>{
+    if(o==='crit'||o==='success'){
+      G.flags.felidaeHint=true;addScore(20);
+      addLog('Old Bird Pigeon squints at you a long moment. "Honest face. For a bird about to do something stupid."','speech');
+      addLog('"There\'s a system out past the third buoy. FELIDAE. The cats are restless out there — proper restless. I\'d not go." He taps the side of his head. "Had the numbers once. Gone now — sieve, this head, in this weather. But I wrote \'em down. Scrap of paper, tucked in one of those books over in the Library. The cat one. It\'ll be there."','speech');
+      addLog('🗒️ Old Bird Pigeon mentioned a note hidden in the Pigeon Library — in "the cat book."','magic');
+      setActions();
+    } else {
+      addLog('"Routes? I give routes to birds I trust." He returns to watching the storm. "Come back when I\'ve decided that\'s you."','speech');
+      setActions();
+    }
+  });
+}
+
+function findFelidaeNote(){
+  if(G.flags.felidaeChartFound){addLog('You already have the Felidae coordinates.','system');return}
+  addLog('You know exactly what you\'re hunting now: the cat book. It takes a while — there are more cat-related volumes in here than seems reasonable — but there it is. "Felis Major: A Field Guide to Regret." Tucked in the spine, a folded scrap in a shaky hand.','narrate');
+  G.flags.felidaeChartFound=true;addScore(30);
+  G._felidaeCoords={x:Math.floor(Math.random()*8)+1,y:Math.floor(Math.random()*8)+1,z:Math.floor(Math.random()*8)+1};
+  addLog('The scrap reads: FELIDAE — a string of coordinates, and beneath them, underlined twice, the single word "don\'t."','speech');
+  addLog(`🗺️ Felidae coordinates noted: X-${G._felidaeCoords.x} · Y-${G._felidaeCoords.y} · Z-${G._felidaeCoords.z}`,'magic');
+  addLog('"The cats are restless," Mr. Ruffle Feathers reads aloud, pocketing it immediately.','ruffle');
+  setActions();
+}
+
 function clearDocks(){
   if(G.flags.docksCleared) return;
   G.flags.docksCleared=true;
@@ -5185,6 +5306,27 @@ function sealWithOrb(informed){
   G.flags.usedOrb=true;addScore(80);
   endingHero();
 }
+function victoryLap(title,badge,ending,epilogue){
+  G.flags.gameWon=true;
+  const co=document.getElementById('combat-overlay');if(co)co.classList.remove('active');
+  closeDlg&&closeDlg();
+  const finish=()=>showEnding(title,badge,ending,epilogue);
+  const beats=[];
+  beats.push(['🚀','The Long Way Home','The seal holds. The Hollow Star folds shut behind you like an eye finally closing. Mr. Ruffle Feathers points the Coop 69 at the station and, for once, gets the coordinates right on the first attempt.']);
+  beats.push([NPCS.pelum.icon,NPCS.pelum.name,'"You came back." Pelum sets down his pen; all eight eyes go briefly still. "I had drafted two endings. The other was shorter. I am very pleased to be burning it."']);
+  if(G.flags.metVexis) beats.push([NPCS.vexis.icon,NPCS.vexis.name,'The great eye regards you. "The Prophecy never said you would succeed," the Oracle admits. "Only that you would go. The rest you did yourself." A pause. "Do not let it go to your head. There is always another star."']);
+  beats.push([NPCS.marta.icon,NPCS.marta.name,'"Oh — it\'s YOU." Marta brightens like someone calculating a markup. "Saviour of the Expanse. That\'s worth something. Five percent off. Two. ...Nothing, actually. But I shall think warmly of you, which is free."']);
+  if(G.flags.felidaeHint||G.flags.felidaeChartFound) beats.push([NPCS.oldbird.icon,NPCS.oldbird.name,'Old Bird Pigeon does not look up from the berths. "Storm\'s cleared," he says. "Bit late. Still." A long pause. "You filed yourself back. Good lad." It is, you suspect, the highest praise he owns.']);
+  if(G.flags.blubberstiltskinFriend) beats.push(['🐋','Blubberstiltskin','Something enormous and gentle keeps pace beyond the bay doors, all the way home. It does not speak. It does not need to.']);
+  beats.push(['🐦','Home','Mr. Ruffle Feathers lands the Coop 69 in its berth. It is, after everything, just a berth. He puts the kettle on. The universe — vast, saved, and entirely unaware of him — turns quietly outside the window.']);
+  let i=0;
+  const step=()=>{
+    if(i>=beats.length){finish();return}
+    const b=beats[i++];
+    showModal(b[0],b[1],b[2],[{label:i>=beats.length?'See how it ends →':'Next →',fn:()=>{closeModal();step();}}]);
+  };
+  step();
+}
 function endingHero(){
   if(!G.flags.usedOrb){ endingHatchOnly(); return; }
   let title,badge,ending,epilogue;
@@ -5205,7 +5347,7 @@ function endingHero(){
     ending='He steps forward. He does not feel heroic. He feels tired and mildly put-upon and quietly certain he\'s done the right thing. The Star seals. The Expanse holds.';
     epilogue='"I want a very long holiday," Mr. Ruffle Feathers announces to the empty chamber. He means it.';
   }
-  showEnding(title,badge,ending,epilogue);
+  victoryLap(title,badge,ending,epilogue);
 }
 function endingHatchOnly(){
   addLog('Mr. Ruffle Feathers shuts the Containment Hatch. It is, when all is said and done, a door. He has read enough to know that doors do not historically hold back gods. He closes it anyway — because it is what he has, and because someone ought to.','narrate');
@@ -5288,21 +5430,29 @@ function endingRefusal(){
       document.getElementById('dice-num').textContent=total;
       document.getElementById('dice-mod').textContent=`d20(${roll}) + Luck(${G.luck}) = ${total}`;
       document.getElementById('dice-face').textContent=roll===20?'✨':roll===1?'💀':DFACES[Math.min(5,Math.floor(roll/3.5))];
-      let fate,epilogue,rc,rt;
-      if(total>=11){
-        rc='success';rt='✓ Stable — for now.';
+      let fate,epilogue,rc,rt,etitle;
+      if(roll===20||total>=18){
+        rc='success';rt='✓ It simply... stops.';etitle='The Bird Who Said No';
+        fate='The Hollow Star reaches — and finds nothing it wants. No fear to feed on, no will to bend. A small bird walked away without so much as a backward glance, and the gesture lands like a door closing. The Star, baffled, folds back into dormancy. Some problems resolve themselves precisely because no one will consent to solve them.';
+        epilogue='"I didn\'t do anything," Mr. Ruffle Feathers insists, to a Ms Ruffle Feathers who has heard this excuse many times and, just this once, finds it holds up. The tea is warm. The universe, improbably, is fine.';
+      } else if(total>=11){
+        rc='success';rt='✓ Stable — for now.';etitle='The Bird Who Said No';
         fate='The Hollow Star waits. It has waited a thousand years; it can wait longer. Nothing wakes that was not already awake. The Expanse holds — for now.';
         epilogue='"I\'ll deal with it when it does," says Mr. Ruffle Feathers, back in the Nest, drinking his tea. He will not be the one dealing with it. But the tea is warm, and for now that is the entire extent of his ambition.';
-      } else {
-        rc='fail';rt='✗ It begins to spread.';
+      } else if(total>=5){
+        rc='fail';rt='✗ It begins to spread.';etitle='The Bird Who Said No';
         fate='The Hollow Star begins to expand — slowly, patiently, as if it had been waiting for precisely this. It reaches for the nearest minds and takes them the way it once took humanity: thought first, then memory, then all the rest. It will not stop. It was never going to stop. It only needed to be left alone.';
         epilogue='Somewhere, a Ms Ruffle Feathers receives an urgent delivery via the Avian Delivery Service. She sighs. She already knows what it is. "Of course," she says. "Of course it was him."';
+      } else {
+        rc='fail';rt='💀 It does not wait.';etitle='The Bird Who Said No (Emphatically)';
+        fate='The refusal is heard. The Hollow Star takes it not as a closing door but as an invitation — and it does not wait politely. The dark comes fast and comes hungry, swallowing the station, the Expanse, and the long patient cycle of the Great Experiment all at once. There is no urgent delivery this time. There is no one left to file it.';
+        epilogue='The last thing to go is a small, warm cup of tea, cooling on a table in an empty Nest. Then that, too, is unmade. Somewhere that is no longer anywhere, a bird remains almost certain he made the right call. He did not. But he is, at least, consistent.';
       }
       document.getElementById('dice-result').textContent=rt;
       document.getElementById('dice-result').className='dice-result '+rc;
       diceCallback=()=>{
         ov.classList.remove('active');
-        showEnding('The Bird Who Said No',`❌ Against Destiny — ${rt}`, fate, epilogue);
+        showEnding(etitle,`❌ Against Destiny — ${rt}`, fate, epilogue);
       };
       document.getElementById('dice-continue').style.display='inline-block';
     }
@@ -5352,6 +5502,7 @@ function returnToTitle(){
 }
 
 function showEnding(title,badge,ending,epilogue){
+  playEndingMusic();
   document.getElementById('game-wrap').classList.remove('active');
   const footnote=G.flags.letterWritten?`
     <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);padding:12px 14px;margin-bottom:20px;text-align:left;border-radius:3px">
@@ -5371,6 +5522,9 @@ function showEnding(title,badge,ending,epilogue){
       <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">HP Left</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.hp}</div></div>
       <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Fires Set</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.fireCount}</div></div>
       <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Toilet Visits</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.toiletCount}</div></div>
+      <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Coos</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.cooCount||0}</div></div>
+      <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Flaps</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.flapCount||0}</div></div>
+      <div style="text-align:center"><div style="font-family:var(--mono);font-size:.58rem;color:var(--soft);text-transform:uppercase">Crumbs</div><div style="font-family:Cinzel,serif;font-size:1.3rem;color:var(--gold)">${G.breadcrumbCount||0}</div></div>
     </div>
     ${G.flags.rodeBlubberstiltskin||G.flags.blubberstiltskinSaved?`<div style="display:flex;gap:12px;justify-content:center;margin-bottom:14px;flex-wrap:wrap">
       ${G.flags.rodeBlubberstiltskin?'<div style="font-family:Cinzel,serif;font-size:.75rem;color:rgba(80,200,255,.8);border:1px solid rgba(80,200,255,.3);padding:3px 12px">🐋 Rode Blubberstiltskin</div>':''}
