@@ -616,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C28</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C29</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -3200,7 +3200,7 @@ function universalActions(){
     {label:'🪶 Flap Wings', fn:()=>flapWings()},
   ];
   const crumbRooms=['nest','market','docking','coop69','basement','facilities'];
-  if(G.loc&&crumbRooms.includes(G.loc.id)) acts.push({label:'🍞 Peck at the Ground', fn:()=>primalPeck(), tab:'look'});
+  if(G.loc&&crumbRooms.includes(G.loc.id)) acts.push({label:'🍞 Peck at the Ground', fn:()=>primalPeck(), tab:'act'});
   return acts;
 }
 
@@ -3739,7 +3739,6 @@ const DECKS=[
 ];
 function roomDeck(id){return DECKS.find(d=>d.rooms.includes(id))||null;}
 function roomUnlocked(id){
-  if(id==='library') return !!(G.flags.pelumDirected||G.flags.libraryVisited);
   if(id==='docking') return !!G.flags.docksCleared;
   return true; // nest, market, antechamber, dovecote are always reachable
 }
