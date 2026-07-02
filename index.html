@@ -616,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C30</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C31</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -1778,6 +1778,7 @@ const ITEMS = {
   lighter:  {id:'lighter',  icon:'🔥',name:'Battered Lighter',  desc:'3 uses of fuel remain. "I do not endorse its use." — Mr. R.F.',use:'use_lighter'},
   collar:   {id:'collar',   icon:'🏅',name:'The Unbrushable\'s Collar',desc:'A trophy from Mrs Fluffinator The Unbrushable. It smells of fury and expensive conditioner.',use:null},
   starchart:{id:'starchart',icon:'🗺️',name:'Star Chart',desc:'Coordinates to the Hollow Star. Pelum kept them for a thousand years. He seems relieved to hand them over.',use:null},
+  catchart: {id:'catchart', icon:'🐈',name:'Felidae Coordinates',desc:'A scrap in a shaky hand — coordinates, and beneath them the word "don\'t," underlined twice. Old Bird Pigeon\'s handwriting.',use:null},
   banana:   {id:'banana',  icon:'🍌',name:'Space Banana',   desc:'Found in the asteroid field. It should not be here. Nothing about this is normal.',use:'use_banana'},
   note:     {id:'note',     icon:'📝',name:'Mysterious Note',   desc:'Found somewhere unspeakable. Reads: "You owe me 3 Shinies. — G"',use:null},
   snack:    {id:'snack',    icon:'🐟',name:'Space Sardines',    desc:'Extremely pungent. Probably useful for something large.',use:'use_snack'},
@@ -1805,7 +1806,7 @@ function spendSh(amount){
   }
 }
 function giveItem(id){
-  const CRITICAL=['scroll','ink','marked','hatchkey','orb','starchart','feather','dockpass'];
+  const CRITICAL=['scroll','ink','marked','hatchkey','orb','starchart','catchart','feather','dockpass'];
   let slot=G.inv.indexOf(null);
   if(slot===-1){
     if(CRITICAL.includes(id)){slot=G.inv.length;G.inv.push(null);}
@@ -2224,8 +2225,9 @@ function dropItem(item){
 function doDropItem(item){
   removeItem(item.id);
   closeModal();
-  addLog(`You drop the ${item.name}.`,'system');
+  addLog(`You drop the ${item.icon} ${item.name}.`,'system');
   addLog('"I am sure I won\'t need that," Mr. Ruffle Feathers says, with varying degrees of accuracy.','ruffle');
+  loseItemToChest({...item});   // dropped items now route to Marta's Lost & Found, not the void
   setActions();
 }
 
@@ -3634,7 +3636,7 @@ const LOCATIONS = {
         G.flags.hollowStarVisited
           ? {label:'🚀 Plot Course — Return to Station',fn:()=>returnToStation(),cls:'magic'}
           : {label:'🚀 Plot Course & Launch',fn:()=>launchCoop(),cls:'magic'},
-        G.flags.felidaeChartFound&&!G.flags.felidaeVisited?{label:'🐱 Plot Course — Felidae System',fn:()=>launchToFelidae(),cls:'danger'}:null,
+        hasItem('catchart')&&!G.flags.felidaeVisited?{label:'🐱 Plot Course — Felidae System',fn:()=>launchToFelidae(),cls:'danger'}:null,
         {label:'🛏️ Long Rest (Full HP & MP)',fn:()=>coopRest()},
         {label:'🚽 Use the Toilet',fn:()=>useCoopToilet()},
         G.flags.crackedMirrorFound&&!G.flags.crackedMirrorUsed?{label:'🪞 Use the Cracked Mirror',fn:()=>useCrackedMirror(),cls:'magic'}:null,
@@ -3739,8 +3741,7 @@ const DECKS=[
 ];
 function roomDeck(id){return DECKS.find(d=>d.rooms.includes(id))||null;}
 function roomUnlocked(id){
-  if(id==='docking') return !!G.flags.docksCleared;
-  return true; // nest, market, antechamber, dovecote are always reachable
+  return true; // all lift rooms reachable; the Security Pigeon gates the corridors, not the lift
 }
 function openLift(){
   let html='<div class="lift-title">🛗 Station Lift</div><div class="lift-sub">Select a destination.</div>';
@@ -3756,7 +3757,6 @@ function openLift(){
         ? `<div class="lift-room here">${nm} <span class="lift-tag">you are here</span></div>`
         : `<div class="lift-room" data-r="${r}">→ ${nm}</div>`;
     });
-    if(isCommerce && !G.flags.docksCleared) html+='<div class="lift-room closed" id="lift-docks">🔒 The Sorting Roost <span class="lift-tag">restricted</span></div>';
     if(isCommerce) html+='<div class="lift-room closed" id="lift-dining">✕ Dining Hall <span class="lift-tag">closed</span></div>';
   });
   html+='<div class="lift-status" id="lift-status"></div>';
@@ -3765,8 +3765,6 @@ function openLift(){
   document.querySelectorAll('#mg-box .lift-room[data-r]').forEach(el=>{
     el.onclick=()=>{const r=el.dataset.r;closeMG();travelTo(r);};
   });
-  const docks=document.getElementById('lift-docks');
-  if(docks)docks.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='The Sorting Roost — RESTRICTED. Avian Mail Processing only. Requires a Pigeonhole Pass you do not currently possess. (The Oracle issues them, apparently. Take it up with the Oracle.)';};
   const dining=document.getElementById('lift-dining');
   if(dining)dining.onclick=()=>{const st=document.getElementById('lift-status');if(st)st.textContent='Dining Hall — CLOSED FOLLOWING AN INCIDENT. No further detail is offered. The faint smell offers some, unprompted. Mr. Ruffle Feathers elects not to investigate, for once in his life.';};
   const cl=document.getElementById('lift-close-btn');if(cl)cl.onclick=()=>closeMG();
@@ -4180,7 +4178,7 @@ function oldBirdCharm(){
 function findFelidaeNote(){
   if(G.flags.felidaeChartFound){addLog('You already have the Felidae coordinates.','system');return}
   addLog('You know exactly what you\'re hunting now: the cat book. It takes a while — there are more cat-related volumes in here than seems reasonable — but there it is. "Felis Major: A Field Guide to Regret." Tucked in the spine, a folded scrap in a shaky hand.','narrate');
-  G.flags.felidaeChartFound=true;addScore(30);
+  G.flags.felidaeChartFound=true;addScore(30);giveItem('catchart');
   G._felidaeCoords={x:Math.floor(Math.random()*8)+1,y:Math.floor(Math.random()*8)+1,z:Math.floor(Math.random()*8)+1};
   addLog('The scrap reads: FELIDAE — a string of coordinates, and beneath them, underlined twice, the single word "don\'t."','speech');
   addLog(`🗺️ Felidae coordinates noted: X-${G._felidaeCoords.x} · Y-${G._felidaeCoords.y} · Z-${G._felidaeCoords.z}`,'magic');
@@ -4316,8 +4314,10 @@ function reclaimLost(idx){
   });
 }
 function finishReclaim(idx){
+  const slot=G.inv.indexOf(null);
+  if(slot===-1){addLog('"...Your pack is full. It stays in the heap. The heap is patient."','speech');setTimeout(()=>martaLostFound(),900);return}
   const it=G.lostFound.splice(idx,1)[0];
-  const slot=G.inv.indexOf(null); if(slot>-1) G.inv[slot]=it;
+  G.inv[slot]=it;
   updateHUD();
   addLog(`Marta plucks your ${it.icon} ${it.name} from the orbit of misplaced things and slides it back across the counter. "Pleasure doing business. With you. About your own property."`,'narrate');
   setTimeout(()=>martaLostFound(),900);
