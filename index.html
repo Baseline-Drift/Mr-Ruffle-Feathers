@@ -616,7 +616,7 @@ html,body{width:100%;height:100%;background:#0d0a0f;overflow:hidden;font-family:
 
 <!-- MAIN GAME -->
 <div id="game-wrap">
-  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C29</div>
+  <div id="build-tag" style="position:fixed;top:0;left:0;z-index:9999;background:#e0307a;color:#fff;font:700 11px/1 monospace;padding:4px 7px;border-bottom-right-radius:6px;letter-spacing:.05em;pointer-events:none">BUILD&nbsp;C30</div>
   <div id="art-panel">
     <canvas id="art-canvas"></canvas>
     <div class="art-badge" id="art-badge">The Nest</div>
@@ -3443,7 +3443,7 @@ const LOCATIONS = {
         {label:'🪞 Study the Mirror',fn:()=>openMirror(),cls:'magic'},
         {label:'🚻 The Facilities',fn:()=>travelTo('facilities')},
       ];
-      if(G.flags.nestVisited)btns.push({label:'😴 Long Rest (Full HP & MP)',fn:()=>{G.hp=G.maxHp;G.mp=G.maxMp;updateHUD();addLog('You sleep properly. HP and MP fully restored.','good')}});
+      if(G.flags.nestVisited)btns.push({label:'😴 Long Rest (Full HP & MP)',fn:()=>{G.hp=G.maxHp;G.mp=G.maxMp;updateHUD();addLog('You sleep properly. HP and MP fully restored.','good');martaRestock();}});
 
       return {context:'Your quarters. The scroll sits on the table.',buttons:[...btns]};
     }
@@ -4519,10 +4519,35 @@ function useCrackedMirror(){
   },1200);
 }
 
+function martaRestock(){
+  // Phase 3 (post-game / dungeon): supply lines fully reopen — trickle resumes. Hook for the dungeon build.
+  if(G.flags.dungeonOpen){
+    if(!hasItem('snack'))G.flags.martaSoldSnack=false;
+    return;
+  }
+  // Phase 1: corridor contested — the Wraiths blockade the supply line. Nothing gets through.
+  if(!G.flags.wraith1Done){
+    if(!G.flags._restockBlockadeNoted){G.flags._restockBlockadeNoted=true;addLog('You wonder, idly, whether Marta has restocked. She has not. Nothing gets past the Wraiths in the corridor.','system');}
+    return;
+  }
+  // Phase 2: corridor cleared — limited, diminishing deliveries.
+  const stage=G.flags.restockStage||0;
+  if(stage===0){
+    G.flags.martaSoldPotion=false;G.flags.martaSoldSnack=false;G.flags.restockStage=1;
+    addLog('🛒 With the corridor clear, a delivery drone finally limps in. Marta has a Healing Draught and a tin of Space Sardines back on the shelf.','magic');
+  } else if(stage===1){
+    G.flags.martaSoldSnack=false;G.flags.restockStage=2;
+    addLog('🛒 One last delivery makes it through — a tin of Space Sardines on Marta\'s shelf. "Don\'t expect more," she says.','system');
+  } else if(!G.flags._restockDryNoted){
+    G.flags._restockDryNoted=true;addLog('Marta\'s shelves stay bare now. "Awaiting new deliveries," reads a hand-lettered sign. The lanes are not what they were.','system');
+  }
+}
+
 function coopRest(){
   G.hp=G.maxHp;G.mp=G.maxMp;updateHUD();
   if(!G.flags.coopRested){G.flags.coopRested=true;addLog('You crawl into the bunk. It is surprisingly comfortable. HP and MP fully restored.','good')}
   else addLog('You rest again. The bunk has a familiar dent. HP and MP fully restored.','good');
+  martaRestock();
 }
 
 function useCoopToilet(){
@@ -4751,28 +4776,17 @@ function asteroidBeltDetour(noChart=false){
       addScore(30);G.flags.hollowStarVisited=true;travelTo('hollow_star');
     },
     ()=>{
-      if(G.flags.blubberstiltskinFriend&&!G.flags.blubberstiltskinSaved){
-        G.flags.blubberstiltskinSaved=true;
-        addLog('The Coop 69 takes a direct hit. Hull breach warning. Emergency lighting kicks in.','bad');loseHp(5);
-        addLog('"This is fine," Mr. Ruffle Feathers says, in a voice that knows it is not fine.','ruffle');
-        // Cutscene sequence
-        setTimeout(()=>addLog('The scanner chirps. Something is on approach.','narrate'),1000);
-        setTimeout(()=>addLog('"That\'s... not an asteroid," Mr. Ruffle Feathers says slowly.','ruffle'),2200);
-        setTimeout(()=>addLog('The scanner resolves the contact. Mass: enormous. Bioluminescent signature: unmistakable.','narrate'),3400);
-        setTimeout(()=>addLog('Blubberstiltskin.','magic'),4400);
-        setTimeout(()=>addLog('In open space. Somehow. Against every physical law Mr. Ruffle Feathers is aware of.','narrate'),5200);
-        setTimeout(()=>addLog('The impact registers as 4.7 on the hull sensors — gentle, for something this size. The Coop 69 is nudged clear of the field like a feather in a breeze.','good'),6200);
-        setTimeout(()=>addLog('Through the viewport, Mr. Ruffle Feathers watches Blubberstiltskin turn. Its bioluminescent spots pulse once — slowly, deliberately — and then it is gone. Back into the dark.','narrate'),7800);
-        setTimeout(()=>addLog('"How did you even—" Mr. Ruffle Feathers starts.','ruffle'),9200);
-        setTimeout(()=>addLog('He stops. Some things don\'t need explaining. Some things just are.','narrate'),10000);
-        setTimeout(()=>addLog('"Thank you," he says quietly, to a viewport full of stars.','ruffle'),11000);
-        setTimeout(()=>{addScore(80);G.flags.hollowStarVisited=true;travelTo('hollow_star')},12500);
-      } else {
-        addLog('The Coop 69 takes significant damage and limps back to the Pigeonholes on emergency thrusters.','bad');loseHp(8);
-        addLog('"The coordinates were ambiguous," Mr. Ruffle Feathers says, for the record.','ruffle');
-        if(!G.flags.blubberstiltskinFriend) addLog('A thought: if something large were to nudge the ship clear... something in the basement, perhaps...','system');
-        travelTo('pigeonholes');
-      }
+      const canRescue=hasItem('snack');
+      const friend=!!G.flags.blubberstiltskinFriend;
+      addLog('The Coop 69 takes a direct hit. Hull breach warning. Emergency lighting kicks in.','bad');
+      const rescueLabel = friend ? '🐋 Continue — a friend is near' : canRescue ? '🐟 Continue — something smells the sardines' : '🐋 Continue — (no Space Sardines)';
+      showModal('⚠️','Hull Breach',
+        canRescue ? 'The field is closing in. Something vast reads on the scanner — or would, if you let it come.' : 'The field is closing in, and nothing is coming to help. There are no sardines to summon it.',
+        [
+          {label:rescueLabel, disabled:!canRescue, fn:()=>{closeModal();blubberRescueCutscene(()=>{addScore(80);G.flags.hollowStarVisited=true;travelTo('hollow_star');});}},
+          {label:'🛞 Limp Home', fn:()=>{closeModal();G.hp=Math.max(1,G.hp-8);updateHUD();addLog('The Coop 69 limps back to the Pigeonholes on emergency thrusters. "The coordinates were ambiguous," Mr. Ruffle Feathers says, for the record.','bad');if(!friend)addLog('A thought: if something large were to nudge the ship clear... something in the basement, perhaps...','system');travelTo('pigeonholes');}},
+          {label:'⚰ End the Tale', fn:()=>{closeModal();softDeathEnding();}},
+        ]);
     }
   );
 }
@@ -4895,7 +4909,7 @@ function nemesisEncounter(){
       {label:'🚁 Brace for Impact',fn:()=>startKeithCombat(),cls:'danger'},
       {label:'🏃 Full Retreat',fn:()=>{
         addLog('"RUNNING BEFORE WE\'VE EVEN STARTED, RUMBLE DUMP?" Keith broadcasts.','speech');
-        loseHp(3);G.flags.nemesisEncountered=false;travelTo('pigeonholes');
+        loseHp(3);if(G.hp<=0)return;G.flags.nemesisEncountered=false;travelTo('pigeonholes');
       }},
     ]
   });
@@ -4919,11 +4933,11 @@ function startKeithCombat(){
   window._keithOnLose = (r)=>{
     if(r==='fled'){
       addLog('"RUNNING AWAY, RUMBLE DUMP?" Keith broadcasts gleefully.','speech');
-      loseHp(5);travelTo('pigeonholes');
+      loseHp(5);if(G.hp<=0)return;travelTo('pigeonholes');
     } else {
       addLog('"Ha!" says Keith. "HA!"','speech');
       addLog('The Coop 69 is disabled. Mr. Ruffle Feathers drifts back to the Pigeonholes.','bad');
-      loseHp(8);G.flags.nemesisEncountered=false;
+      loseHp(8);if(G.hp<=0)return;G.flags.nemesisEncountered=false;
       travelTo('pigeonholes');
     }
   };
@@ -5457,24 +5471,63 @@ function endingRefusal(){
     }
   },80);
 }
-function tryBlubberRevive(){
-  if(!hasItem('snack')||!G.flags.blubberstiltskinFriend) return false;
-  removeItem('snack');
-  G.hp=Math.max(1,Math.ceil((G.maxHp||20)/2));updateHUD();
-  addLog('Darkness — then a vast, gentle warmth. Blubberstiltskin looms from nowhere, plucks the Space Sardines from your bag, and breathes light back into you.','magic');
-  addLog('"...We are even now," Mr. Ruffle Feathers says. Blubberstiltskin, who does not keep score, lets him believe it.','ruffle');
-  return true;
+function blubberRescueCutscene(onFinish){
+  const co=document.getElementById('combat-overlay');if(co)co.classList.remove('active');
+  closeModal();
+  const friend=!!G.flags.blubberstiltskinFriend;
+  removeItem('snack');            // the tin is spent either way
+  G.flags.blubberstiltskinSaved=true;  // preserves the ending badge/epilogue
+  let beats;
+  if(friend){
+    beats=[
+      ['🐋','Something on Approach','The scanner chirps. Something vast is on approach. "That\'s... not an asteroid," Mr. Ruffle Feathers says slowly.'],
+      ['🐋','Blubberstiltskin','Mass: enormous. Bioluminescent signature: unmistakable. Blubberstiltskin — in open space, somehow, against every law Mr. Ruffle Feathers is aware of. It came for HIM. Not the sardines. Him.'],
+      ['🐋','The Nudge','A gentle 4.7 on the hull sensors, and the world stops ending. Its great spots pulse once — slow, deliberate — the way a friend nods to you across a crowded room.'],
+      ['🐟','...We Are Even Now','Mr. Ruffle Feathers presses his last tin of Space Sardines to the airlock. Blubberstiltskin takes it with something like tenderness. "We are even now," he says. The whale, who does not keep score, lets him believe it. You are made whole.'],
+    ];
+  } else {
+    beats=[
+      ['🐋','Something on Approach','The scanner chirps. Something vast is on approach. "That\'s... not an asteroid," Mr. Ruffle Feathers says slowly.'],
+      ['🐟','Drawn by the Scent','Enormous. Bioluminescent. And it is not, you notice, looking at the ship. It is looking at the tin of Space Sardines in your bag. It came for the FOOD.'],
+      ['🐋','Incidental Cargo','Blubberstiltskin engulfs tin, ship, and bird in one vast absent-minded motion, extracts the sardines with surgical care, and exhales the rest clear. You survive — barely — on a single ragged heartbeat. You were, at no point, the point.'],
+    ];
+  }
+  let i=0;
+  const step=()=>{
+    if(i>=beats.length){
+      G.hp = friend ? G.maxHp : 1;
+      updateHUD();
+      if(onFinish) onFinish();
+      return;
+    }
+    const b=beats[i++];
+    const last=i>=beats.length;
+    showModal(b[0],b[1],b[2],[{label:last?(friend?'Fly on →':'...Survive →'):'Next →',fn:()=>{closeModal();step();}}]);
+  };
+  step();
+}
+
+function softDeathEnding(){
+  showEnding('The Bird Who Got As Far As He Got','💀 An Incomplete Prophecy',
+    'The prophecy did not specify that the Chosen Bird would succeed. It specified only that he would be chosen. On the matter of his survival it was, in hindsight, conspicuously silent.',
+    'Somewhere, an unfiled complaint (ref: PHX-4471-B) sits in a dead-letter drawer, its sender no longer available for comment. The Hollow Star continues, patiently, to hum. The kettle in the Nest has gone cold. Mr. Ruffle Feathers got as far as he got — which was further than most, and not, in the end, quite far enough.');
 }
 function deathScreen(){
-  if(tryBlubberRevive()){
-    const ov=document.getElementById('combat-overlay');
-    if(ov&&ov.classList.contains('active'))updateCombatHUD();
-    return;
-  }
   stopMusic();
-  showModal('💀','Mr. Ruffle Feathers Has Perished',
-    '"I did not survive fourteen asteroid fields, one singing void, and a prophecy to end like this." — Mr. Ruffle Feathers, last words',
-    [{label:'Try Again',fn:()=>{closeModal();returnToTitle()}}]
+  const co=document.getElementById('combat-overlay');if(co)co.classList.remove('active');
+  const canRescue=hasItem('snack');
+  const friend=!!G.flags.blubberstiltskinFriend;
+  const rescueLabel = friend ? '🐋 Continue — a friend is near'
+                    : canRescue ? '🐟 Continue — something smells the sardines'
+                    : '🐋 Continue — (no Space Sardines)';
+  showModal('💀','Mr. Ruffle Feathers Falls',
+    canRescue
+      ? '"I did not survive fourteen asteroid fields and one singing void to end like THIS." Darkness closes in — and then, from somewhere impossibly large, a sound.'
+      : '"I did not survive fourteen asteroid fields and one singing void to end like THIS." Darkness closes in. Nothing large is coming. There are no sardines to bring it.',
+    [
+      {label:rescueLabel, disabled:!canRescue, fn:()=>{closeModal();blubberRescueCutscene(()=>{addLog('You come to in the Pigeonholes, the ship ticking as it cools. Whatever you were fighting is still out there.','system');travelTo('pigeonholes');});}},
+      {label:'⚰ End the Tale', fn:()=>{closeModal();softDeathEnding();}},
+    ]
   );
 }
 
